@@ -1,19 +1,19 @@
 package cfg;
 
 import com.github.javaparser.ast.Node;
+import lombok.Getter;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class CFG {
 
+    @Getter
     private List<Node> sourceNodes = new LinkedList<>();
+    @Getter
     private List<Node> sinkNodes = new LinkedList<>();
-    private Map<Node, List<Node>> map = new HashMap<>();
-
-    public CFG() {
-//        this.start = new CFGNode(null);
-    }
+    @Getter
+    private List<CFGNode> vertexList = new ArrayList<>();
 
 //    private List<Node> findSource() {
 //        List<Node> result = new LinkedList<>();
@@ -34,10 +34,6 @@ public class CFG {
 //        return result;
 //    }
 
-    public Map<Node, List<Node>> getMap() {
-        return this.map;
-    }
-
     public void setSourceNodes(Node... nodes) {
         this.sourceNodes = new LinkedList<>(Arrays.asList(nodes));
     }
@@ -56,76 +52,97 @@ public class CFG {
         this.sinkNodes.addAll(nodes);
     }
 
-    public List<Node> getSourceNodes() {
-        return this.sourceNodes;
+    public CFGNode findNode(Node node) {
+        for (CFGNode v: this.vertexList) {
+            if (v.equalNode(node)) {
+                return v;
+            }
+        }
+        return null;
     }
 
-    public List<Node> getSinkNodes() {
-        return this.sinkNodes;
+    public boolean containNode(Node node) {
+        return this.findNode(node) != null;
     }
 
     public void addNode(Node node) {
-        this.map.put(node, new LinkedList<>());
+        if (! this.containNode(node)) {
+            this.vertexList.add(new CFGNode(node));
+        }
     }
 
     public void addEdge(Node fromNode, Node toNode) {
-        if (! this.map.containsKey(fromNode)) {
-            this.addNode(fromNode);
+        if (! this.containNode(fromNode)) {
+            this.vertexList.add(new CFGNode(fromNode));
         }
-        if (! this.map.containsKey(toNode)) {
-            this.addNode(toNode);
+        if (! this.containNode(toNode)) {
+            this.vertexList.add(new CFGNode(toNode));
         }
-        this.map.get(fromNode).add(toNode);
+        CFGNode v1 = this.findNode(fromNode);
+        CFGNode v2 = this.findNode(toNode);
+        v1.addNextNode(toNode);
+        v2.addPreNode(fromNode);
     }
 
     public List<Node> findPreNodes(Node node) {
-        List<Node> result = new LinkedList<>();
-        for (Map.Entry<Node, List<Node>> entry : this.map.entrySet()) {
-            if (entry.getValue().contains(node)) {
-                result.add(entry.getKey());
-            }
-        }
-        return result;
+        CFGNode cfgNode = this.findNode(node);
+        return cfgNode != null ? cfgNode.getPreNodes() : new ArrayList<>();
     }
 
     public List<Node> findNextNodes(Node node) {
-        if (this.map.keySet().contains(node)) {
-            return this.map.get(node);
-        }
-        return new LinkedList<>();
+        CFGNode cfgNode = this.findNode(node);
+        return cfgNode != null ? cfgNode.getNextNodes() : new ArrayList<>();
     }
 
     public void deleteEdge(Node fromNode, Node toNode) {
-        if (this.map.containsKey(fromNode)) {
-            this.map.get(fromNode).remove(toNode);
+        CFGNode v1 = this.findNode(fromNode);
+        CFGNode v2 = this.findNode(toNode);
+        if (v1 != null && v2 != null) {
+            v1.removeNextNode(toNode);
+            v2.removePreNode(fromNode);
+        }
+    }
+
+    public void removeNode(Node node) {
+        CFGNode cfgNode = this.findNode(node);
+        this.vertexList.remove(cfgNode);
+        for (CFGNode v: this.vertexList) {
+            if (v.getPreNodes().contains(node))
+                v.removePreNode(node);
+            if (v.getNextNodes().contains(node))
+                v.removeNextNode(node);
         }
     }
 
     public void mergeCFG(Node node, CFG cfg) {
+        CFGNode cfgNode = this.findNode(node);
+        if (cfgNode == null) return;
+
         if (this.sourceNodes.remove(node)) {
             this.sourceNodes.addAll(cfg.getSourceNodes());
         }
         if (this.sinkNodes.remove(node)) {
             this.sinkNodes.addAll(cfg.getSinkNodes());
         }
-        for (Node n1: this.findPreNodes(node)) {
+
+        for (Node n1: cfgNode.getPreNodes()) {
             for (Node n2: cfg.getSourceNodes()) {
                 this.addEdge(n1, n2);
             }
-            this.deleteEdge(n1, node);
         }
-        for (Node n1: this.findNextNodes(node)) {
+        for (Node n1: cfgNode.getNextNodes()) {
             for (Node n2: cfg.getSinkNodes()) {
                 this.addEdge(n2, n1);
             }
-            this.deleteEdge(node, n1);
         }
-        this.map.remove(node);
-        for (Map.Entry<Node, List<Node>> entry : cfg.getMap().entrySet()) {
-            if (this.map.keySet().contains(entry.getKey())) {
-                this.map.get(entry.getKey()).addAll(entry.getValue());
+
+        this.removeNode(node);
+        for (CFGNode v1: cfg.getVertexList()) {
+            if (this.containNode(v1.getNode())) {
+                CFGNode v2 = this.findNode(v1.getNode());
+                v2.mergeNode(v1);
             } else {
-                this.map.put(entry.getKey(), entry.getValue());
+                this.vertexList.add(v1);
             }
         }
 //        System.out.println(this.toDot());
@@ -133,20 +150,18 @@ public class CFG {
 
     public String toDot() {
         StringBuilder buffer = new StringBuilder("digraph cfg {\n").append("node[shape=box];\n");
-        List<Node> nodeList = new ArrayList<>(this.map.keySet());
-        for (int i = 0; i < nodeList.size(); i++) {
-            String label = nodeList.get(i).toString();
+        for (int i = 0; i < this.vertexList.size(); i++) {
+            String label = this.vertexList.get(i).toString();
             label = label.replace("\n", "\\l");
-            buffer.append("n").append(i).append("[label=\"").append(label).append("\"];\n");
+            buffer.append(String.format("n%d[label=\"%s\"];\n", i, label));
         }
-        for (int i = 0; i < nodeList.size(); i++) {
-            List<Node> neighbours = this.map.get(nodeList.get(i));
-            for (Node node: neighbours) {
-                int j = nodeList.indexOf(node);
-                buffer.append("n").append(i).append(" -> ").append("n").append(j).append(";\n");
+        for (int i = 0; i < this.vertexList.size(); i++) {
+            for (Node node: this.vertexList.get(i).getNextNodes()) {
+                int j = this.vertexList.indexOf(this.findNode(node));
+                buffer.append(String.format("n%d->n%d;\n", i, j));
             }
         }
-        buffer.append("}");
+        buffer.append("}\n");
         return buffer.toString();
     }
 

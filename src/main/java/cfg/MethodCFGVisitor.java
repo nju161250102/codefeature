@@ -48,7 +48,7 @@ public class MethodCFGVisitor extends VoidVisitorAdapter<CFG> {
             thisCFG.addEdge(stmt.getCondition(), stmt.getElseStmt().get());
             thisCFG.setSinkNodes(stmt.getThenStmt(), stmt.getElseStmt().get());
         } else {
-            thisCFG.setSinkNodes(stmt.getThenStmt());
+            thisCFG.setSinkNodes(stmt.getCondition(), stmt.getThenStmt());
         }
         cfg.mergeCFG(stmt, thisCFG);
         super.visit(stmt, cfg);
@@ -80,22 +80,36 @@ public class MethodCFGVisitor extends VoidVisitorAdapter<CFG> {
     public void visit(ForStmt stmt, CFG cfg) {
         CFG thisCFG = new CFG();
         BlockStmt initStmt = this.ExpressionsToBlcok(stmt.getInitialization());
+        BlockStmt updateSmt = this.ExpressionsToBlcok(stmt.getUpdate());
         thisCFG.setSourceNodes(initStmt);
+
         if (stmt.getCompare().isPresent()) {
             thisCFG.addEdge(initStmt, stmt.getCompare().get());
             thisCFG.addEdge(stmt.getCompare().get(), stmt.getBody());
-            BlockStmt blockStmt = this.ExpressionsToBlcok(stmt.getUpdate());
-            thisCFG.addEdge(stmt.getBody(), blockStmt);
-            thisCFG.addEdge(blockStmt, stmt.getCompare().get());
+            thisCFG.addEdge(stmt.getBody(), updateSmt);
+            thisCFG.addEdge(updateSmt, stmt.getCompare().get());
             thisCFG.setSinkNodes(stmt.getCompare().get());
         } else {
-            thisCFG.addEdge(this.ExpressionsToBlcok(stmt.getInitialization()), stmt.getBody());
+            thisCFG.addEdge(initStmt, stmt.getBody());
             thisCFG.addEdge(stmt.getBody(), stmt.getBody());
             thisCFG.setSinkNodes(stmt.getBody());
         }
         super.visit(stmt, thisCFG);
+        this.visit(initStmt, thisCFG);
+        this.visit(updateSmt, thisCFG);
+        for (Node node: thisCFG.getSinkNodes()) {
+            CFGNode cfgNode = thisCFG.findNode(node);
+            if (node instanceof BreakStmt) cfgNode.clearNextNode();
+        }
         cfg.mergeCFG(stmt, thisCFG);
+    }
 
+    @Override
+    public void visit(BreakStmt stmt, CFG cfg) {
+        List<Node> sinkNodes = cfg.getSinkNodes();
+        sinkNodes.add(stmt);
+        cfg.setSinkNodes(sinkNodes);
+        super.visit(stmt, cfg);
     }
 
     private BlockStmt ExpressionsToBlcok(NodeList<Expression> expressions) {
