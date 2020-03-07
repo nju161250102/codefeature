@@ -4,7 +4,6 @@ import com.github.javaparser.ast.Node;
 import lombok.Getter;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class CFG {
 
@@ -153,6 +152,7 @@ public class CFG {
         for (int i = 0; i < this.vertexList.size(); i++) {
             String label = this.vertexList.get(i).toString();
             label = label.replace("\n", "\\l");
+            label = label.replace("\"", "\\\"");
             buffer.append(String.format("n%d[label=\"%s\"];\n", i, label));
         }
         for (int i = 0; i < this.vertexList.size(); i++) {
@@ -160,6 +160,16 @@ public class CFG {
                 int j = this.vertexList.indexOf(this.findNode(node));
                 buffer.append(String.format("n%d->n%d;\n", i, j));
             }
+        }
+        buffer.append("start[label=\"Start\"];\n");
+        buffer.append("end[label=\"End\"];\n");
+        for (Node node: this.sourceNodes) {
+            int index = this.vertexList.indexOf(this.findNode(node));
+            buffer.append(String.format("start->n%d;\n", index));
+        }
+        for (Node node: this.sinkNodes) {
+            int index = this.vertexList.indexOf(this.findNode(node));
+            buffer.append(String.format("n%d->end;\n", index));
         }
         buffer.append("}\n");
         return buffer.toString();
