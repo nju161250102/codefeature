@@ -8,6 +8,7 @@ public class SymbolTools {
     public static void nameSubstitute(MethodDeclaration declaration) {
         ModifierVisitor<Void> visitor = new SymbolVisitor();
         visitor.visit(declaration, null);
+        visitor.visit(declaration, null);
     }
 
 }
