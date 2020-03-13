@@ -15,7 +15,7 @@ public class CFGNode {
     @Getter
     private List<Node> nextNodes = new ArrayList<>();
 
-    public CFGNode(Node node) {
+    CFGNode(Node node) {
         this.node = node;
     }
 
@@ -23,33 +23,33 @@ public class CFGNode {
         return this.node.toString();
     }
 
-    public void addPreNode(Node node) {
+    void addPreNode(Node node) {
         if (! this.preNodes.contains(node))
             this.preNodes.add(node);
     }
 
-    public void addNextNode(Node node) {
+    void addNextNode(Node node) {
         if (! this.nextNodes.contains(node))
             this.nextNodes.add(node);
     }
 
-    public void removePreNode(Node node) {
+    void removePreNode(Node node) {
         this.preNodes.remove(node);
     }
 
-    public void removeNextNode(Node node) {
+    void removeNextNode(Node node) {
         this.nextNodes.remove(node);
     }
 
-    public void clearNextNode() {
+    void clearNextNode() {
         this.nextNodes.clear();
     }
 
-    public boolean equalNode(Node node) {
+    boolean equalNode(Node node) {
         return this.node == node;
     }
 
-    public void mergeNode(CFGNode cfgNode) {
+    void mergeNode(CFGNode cfgNode) {
         this.preNodes.addAll(cfgNode.getPreNodes());
         this.nextNodes.addAll(cfgNode.getNextNodes());
     }

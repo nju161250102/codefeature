@@ -1,6 +1,7 @@
 package cfg;
 
 import com.github.javaparser.ast.Node;
+import com.github.javaparser.ast.stmt.*;
 import lombok.Getter;
 
 import java.util.*;
@@ -8,56 +9,24 @@ import java.util.*;
 public class CFG {
 
     @Getter
-    private List<Node> sourceNodes = new LinkedList<>();
+    private Node sourceNode;
     @Getter
-    private List<Node> sinkNodes = new LinkedList<>();
+    private List<Node> sinkNodes = new ArrayList<>();
     @Getter
     private List<CFGNode> vertexList = new ArrayList<>();
+    @Getter
+    private List<CFGNode> breakNodes = new ArrayList<>();
 
-//    private List<Node> findSource() {
-//        List<Node> result = new LinkedList<>();
-//        for (Node node : this.map.keySet()) {
-//            if (this.map.values().stream().flatMap(Collection::stream).filter(n -> {return (n == node);}).collect(Collectors.toList()).isEmpty())
-//                result.add(node);
-//        }
-//        return result;
-//    }
-//
-//    private List<Node> findSink() {
-//        List<Node> result = new LinkedList<>();
-//        for (Node node : this.map.keySet()) {
-//            if (this.map.get(node).isEmpty()) {
-//                result.add(node);
-//            }
-//        }
-//        return result;
-//    }
-
-    public void setSourceNodes(Node... nodes) {
-        this.sourceNodes = new LinkedList<>(Arrays.asList(nodes));
+    public void setSourceNode(Node node) {
+        this.sourceNode = node;
     }
 
-    public void setSourceNodes(Collection nodes) {
-        this.sourceNodes = new LinkedList<>();
-        this.sourceNodes.addAll(nodes);
-    }
-
-    public void setSinkNodes(Node... nodes) {
-        this.sinkNodes = new LinkedList<>(Arrays.asList(nodes));
-    }
-
-    public void setSinkNodes(Collection nodes) {
-        this.sinkNodes = new LinkedList<>();
-        this.sinkNodes.addAll(nodes);
+    public void addSinkNode(Node node) {
+        this.sinkNodes.add(node);
     }
 
     public CFGNode findNode(Node node) {
-        for (CFGNode v: this.vertexList) {
-            if (v.equalNode(node)) {
-                return v;
-            }
-        }
-        return null;
+        return this.findNodeInList(this.vertexList, node);
     }
 
     public boolean containNode(Node node) {
@@ -68,6 +37,10 @@ public class CFG {
         if (! this.containNode(node)) {
             this.vertexList.add(new CFGNode(node));
         }
+    }
+
+    public void addBreak(BreakStmt breakStmt) {
+        this.breakNodes.add(new CFGNode(breakStmt));
     }
 
     public void addEdge(Node fromNode, Node toNode) {
@@ -81,25 +54,6 @@ public class CFG {
         CFGNode v2 = this.findNode(toNode);
         v1.addNextNode(toNode);
         v2.addPreNode(fromNode);
-    }
-
-    public List<Node> findPreNodes(Node node) {
-        CFGNode cfgNode = this.findNode(node);
-        return cfgNode != null ? cfgNode.getPreNodes() : new ArrayList<>();
-    }
-
-    public List<Node> findNextNodes(Node node) {
-        CFGNode cfgNode = this.findNode(node);
-        return cfgNode != null ? cfgNode.getNextNodes() : new ArrayList<>();
-    }
-
-    public void deleteEdge(Node fromNode, Node toNode) {
-        CFGNode v1 = this.findNode(fromNode);
-        CFGNode v2 = this.findNode(toNode);
-        if (v1 != null && v2 != null) {
-            v1.removeNextNode(toNode);
-            v2.removePreNode(fromNode);
-        }
     }
 
     public void removeNode(Node node) {
@@ -117,25 +71,39 @@ public class CFG {
         CFGNode cfgNode = this.findNode(node);
         if (cfgNode == null) return;
 
-        if (this.sourceNodes.remove(node)) {
-            this.sourceNodes.addAll(cfg.getSourceNodes());
+        // 考虑对待合并CFG中特殊节点的处理
+        if (this.isSpecialStmt(node)) {
+            // 合并节点是循环节点时进行处理
+            for (CFGNode n: cfg.getBreakNodes()) {
+                // 删除Break的所有出边，并设为结束点
+                cfg.findNode(n.getNode()).clearNextNode();
+                if (this.findNodeInList(this.breakNodes, n.getNode()) == null) {
+                    cfg.sinkNodes.add(n.getNode());
+                }
+            }
+        } else {
+            // 否则保留
+            this.breakNodes.addAll(cfg.getBreakNodes());
+        }
+        // 替换的节点是起点或终点的一部分时需要更新
+        if (node == this.sourceNode) {
+            this.sourceNode = cfg.getSourceNode();
         }
         if (this.sinkNodes.remove(node)) {
             this.sinkNodes.addAll(cfg.getSinkNodes());
         }
-
+        // 将所给图的两端合并入当前图
         for (Node n1: cfgNode.getPreNodes()) {
-            for (Node n2: cfg.getSourceNodes()) {
-                this.addEdge(n1, n2);
-            }
+                this.addEdge(n1, cfg.getSourceNode());
         }
         for (Node n1: cfgNode.getNextNodes()) {
             for (Node n2: cfg.getSinkNodes()) {
                 this.addEdge(n2, n1);
             }
         }
-
+        // 删去替换的节点
         this.removeNode(node);
+        // 把所给图中剩余的节点关系合并到本图中
         for (CFGNode v1: cfg.getVertexList()) {
             if (this.containNode(v1.getNode())) {
                 CFGNode v2 = this.findNode(v1.getNode());
@@ -144,35 +112,48 @@ public class CFG {
                 this.vertexList.add(v1);
             }
         }
-//        System.out.println(this.toDot());
     }
 
     public String toDot() {
         StringBuilder buffer = new StringBuilder("digraph cfg {\n").append("node[shape=box];\n");
+        // 输出节点
         for (int i = 0; i < this.vertexList.size(); i++) {
             String label = this.vertexList.get(i).toString();
             label = label.replace("\n", "\\l");
             label = label.replace("\"", "\\\"");
             buffer.append(String.format("n%d[label=\"%s\"];\n", i, label));
         }
+        // 输出边
         for (int i = 0; i < this.vertexList.size(); i++) {
             for (Node node: this.vertexList.get(i).getNextNodes()) {
                 int j = this.vertexList.indexOf(this.findNode(node));
                 buffer.append(String.format("n%d->n%d;\n", i, j));
             }
         }
+        // 输出起点和终点
         buffer.append("start[label=\"Start\"];\n");
         buffer.append("end[label=\"End\"];\n");
-        for (Node node: this.sourceNodes) {
-            int index = this.vertexList.indexOf(this.findNode(node));
-            buffer.append(String.format("start->n%d;\n", index));
-        }
+        buffer.append(String.format("start->n%d;\n", this.vertexList.indexOf(this.findNode(this.sourceNode))));
         for (Node node: this.sinkNodes) {
             int index = this.vertexList.indexOf(this.findNode(node));
             buffer.append(String.format("n%d->end;\n", index));
         }
+        // 结束
         buffer.append("}\n");
         return buffer.toString();
+    }
+
+    private boolean isSpecialStmt(Node node) {
+        return (node instanceof DoStmt) || (node instanceof WhileStmt) || (node instanceof ForStmt) || (node instanceof SwitchStmt);
+    }
+
+    private CFGNode findNodeInList(List<CFGNode> list, Node node) {
+        for (CFGNode v: list) {
+            if (v.equalNode(node)) {
+                return v;
+            }
+        }
+        return null;
     }
 
 }
