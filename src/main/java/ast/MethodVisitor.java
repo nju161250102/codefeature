@@ -145,6 +145,11 @@ public class MethodVisitor extends VoidVisitorAdapter<List<String>> {
         super.visit(expr, result);
     }
 
+    public void visit(ThisExpr expr, List<String> result) {
+        result.add("this");
+        super.visit(expr, result);
+    }
+
     public void visit(UnaryExpr expr, List<String> result) {
         result.add(expr.getOperator().asString());
         super.visit(expr, result);
@@ -155,6 +160,5 @@ public class MethodVisitor extends VoidVisitorAdapter<List<String>> {
         result.add(declarator.getName().asString());
         super.visit(declarator, result);
     }
-
 
 }
