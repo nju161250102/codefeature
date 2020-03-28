@@ -20,6 +20,12 @@
         </plugins>
     </build>
 
+    <properties>
+        <nd4j.version>1.0.0-beta5</nd4j.version>
+        <dl4j.version>1.0.0-beta5</dl4j.version>
+        <nd4j.backend>nd4j-native-platform</nd4j.backend>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>junit</groupId>
@@ -30,12 +36,17 @@
         <dependency>
             <groupId>org.deeplearning4j</groupId>
             <artifactId>deeplearning4j-core</artifactId>
-            <version>1.0.0-alpha</version>
+            <version>${dl4j.version}</version>
         </dependency>
         <dependency>
             <groupId>org.deeplearning4j</groupId>
             <artifactId>deeplearning4j-nlp</artifactId>
-            <version>1.0.0-alpha</version>
+            <version>${dl4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.deeplearning4j</groupId>
+            <artifactId>deeplearning4j-graph</artifactId>
+            <version>${dl4j.version}</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -50,18 +61,18 @@
         <dependency>
             <groupId>org.nd4j</groupId>
             <artifactId>nd4j</artifactId>
-            <version>1.0.0-alpha</version>
+            <version>${nd4j.version}</version>
             <type>pom</type>
         </dependency>
         <dependency>
             <groupId>org.nd4j</groupId>
             <artifactId>nd4j-native-platform</artifactId>
-            <version>1.0.0-alpha</version>
+            <version>${nd4j.version}</version>
         </dependency>
         <dependency>
             <groupId>org.nd4j</groupId>
             <artifactId>nd4j-native</artifactId>
-            <version>1.0.0-alpha</version>
+            <version>${nd4j.version}</version>
             <classifier>linux-x86_64-avx2</classifier>
         </dependency>
 

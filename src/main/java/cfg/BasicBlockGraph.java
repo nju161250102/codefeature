@@ -61,13 +61,14 @@ public class BasicBlockGraph {
         }
     }
 
-    public int[][] getAdjacency() {
-        int[][] result = new int[basicBlocks.size()][basicBlocks.size()];
+    public List<List<Integer>> getEdges() {
+        List<List<Integer>> result = new ArrayList<>();
         for (int i = 0; i < this.basicBlocks.size(); i++) {
+            List<Integer> neightbours = new ArrayList<>();
             for (BasicBlock block: this.basicBlocks.get(i).getNextBlocks()) {
-                int j = this.basicBlocks.indexOf(block);
-                result[i][j] = 1;
+                neightbours.add(this.basicBlocks.indexOf(block));
             }
+            result.add(neightbours);
         }
         return result;
     }
