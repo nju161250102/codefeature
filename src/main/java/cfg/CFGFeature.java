@@ -14,11 +14,10 @@ public class CFGFeature {
     public static CFG extract(MethodDeclaration method) {
         // 清除注释
         CommentTools.removeComment(method);
-        // 对变量重新命名
-        SymbolTools.nameSubstitute(method);
         CFG cfg = new CFG();
         VoidVisitor<CFG> visitor = new MethodCFGVisitor();
         visitor.visit(method, cfg);
+        cfg.handleReturn();
         logger.info("Extract CFG Feature From " + method.getNameAsString());
         return cfg;
     }

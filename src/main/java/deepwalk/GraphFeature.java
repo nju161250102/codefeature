@@ -15,9 +15,12 @@ public class GraphFeature {
 
     public static List<List<Double>> extract(BasicBlockGraph basicBlockGraph) {
         // 参数设置
-        int vectorSize = 5;
+        int vectorSize = 16;
         int windowSize = 2;
         double learningRate = 0.001;
+
+        List<List<Double>> result = new ArrayList<>();
+        if (basicBlockGraph.getBasicBlocks().size() < 2) return result;
 
         List<String> vertexList = basicBlockGraph.getBasicBlocks().stream().map(BasicBlock::toString).collect(Collectors.toList());
         MyVertexFactory<String> vertexFactory = new MyVertexFactory<>(vertexList);
@@ -37,11 +40,9 @@ public class GraphFeature {
                 .build();
         deepWalk.initialize(graph);
 
-        List<List<Double>> result = new ArrayList<>();
         for (int i = 0; i < vertexList.size(); i++) {
             INDArray vector = deepWalk.getVertexVector(i);
             result.add(Arrays.stream(vector.toDoubleVector()).boxed().collect(Collectors.toList()));
-            System.out.println(Arrays.toString(vector.dup().data().asFloat()));
         }
         return result;
     }

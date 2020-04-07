@@ -17,33 +17,25 @@ public class CFG {
     @Getter
     private List<CFGNode> breakNodes = new ArrayList<>();
 
-    public void setSourceNode(Node node) {
+    void setSourceNode(Node node) {
         this.sourceNode = node;
     }
 
-    public void addSinkNode(Node node) {
+    void addSinkNode(Node node) {
         this.sinkNodes.add(node);
     }
 
-    public CFGNode findNode(Node node) {
-        return this.findNodeInList(this.vertexList, node);
-    }
-
-    public boolean containNode(Node node) {
-        return this.findNode(node) != null;
-    }
-
-    public void addNode(Node node) {
+    void addNode(Node node) {
         if (! this.containNode(node)) {
             this.vertexList.add(new CFGNode(node));
         }
     }
 
-    public void addBreak(BreakStmt breakStmt) {
+    void addBreak(BreakStmt breakStmt) {
         this.breakNodes.add(new CFGNode(breakStmt));
     }
 
-    public void addEdge(Node fromNode, Node toNode) {
+    void addEdge(Node fromNode, Node toNode) {
         if (! this.containNode(fromNode)) {
             this.vertexList.add(new CFGNode(fromNode));
         }
@@ -56,7 +48,7 @@ public class CFG {
         v2.addPreNode(fromNode);
     }
 
-    public void removeNode(Node node) {
+    private void removeNode(Node node) {
         CFGNode cfgNode = this.findNode(node);
         this.vertexList.remove(cfgNode);
         for (CFGNode v: this.vertexList) {
@@ -67,7 +59,7 @@ public class CFG {
         }
     }
 
-    public void mergeCFG(Node node, CFG cfg) {
+    void mergeCFG(Node node, CFG cfg) {
         CFGNode cfgNode = this.findNode(node);
         if (cfgNode == null) return;
 
@@ -114,34 +106,49 @@ public class CFG {
         }
     }
 
+    void handleReturn() {
+        for (CFGNode n: this.getVertexList()) {
+            // 删除Return的所有出边，并设为结束点
+            if (n.getNode() instanceof ReturnStmt) {
+                n.clearNextNode();
+                boolean flag = true;
+                for (Node node: this.sinkNodes) {
+                    if (node == n.getNode()) flag = false;
+                }
+                if (flag) this.sinkNodes.add(n.getNode());
+            }
+        }
+    }
+
     public String toDot() {
-        StringBuilder buffer = new StringBuilder("digraph cfg {\n").append("node[shape=box];\n");
+        StringBuilder builder = new StringBuilder("digraph cfg {\n").append("node[shape=box];\n");
         // 输出节点
         for (int i = 0; i < this.vertexList.size(); i++) {
             String label = this.vertexList.get(i).toString();
             label = label.replace("\n", "\\l");
             label = label.replace("\"", "\\\"");
-            buffer.append(String.format("n%d[label=\"%s\"];\n", i, label));
+            builder.append(String.format("n%d[label=\"%s\"];\n", i, label));
         }
         // 输出边
         for (int i = 0; i < this.vertexList.size(); i++) {
             for (Node node: this.vertexList.get(i).getNextNodes()) {
                 int j = this.vertexList.indexOf(this.findNode(node));
-                buffer.append(String.format("n%d->n%d;\n", i, j));
+                builder.append(String.format("n%d->n%d;\n", i, j));
             }
         }
         // 输出起点和终点
-        buffer.append("start[label=\"Start\"];\n");
-        buffer.append("end[label=\"End\"];\n");
-        buffer.append(String.format("start->n%d;\n", this.vertexList.indexOf(this.findNode(this.sourceNode))));
+        builder.append("start[label=\"Start\"];\n");
+        builder.append("end[label=\"End\"];\n");
+        builder.append(String.format("start->n%d;\n", this.vertexList.indexOf(this.findNode(this.sourceNode))));
         for (Node node: this.sinkNodes) {
             int index = this.vertexList.indexOf(this.findNode(node));
-            buffer.append(String.format("n%d->end;\n", index));
+            builder.append(String.format("n%d->end;\n", index));
         }
         // 结束
-        buffer.append("}\n");
-        return buffer.toString();
+        builder.append("}\n");
+        return builder.toString();
     }
+
 
     private boolean isSpecialStmt(Node node) {
         return (node instanceof DoStmt) || (node instanceof WhileStmt) || (node instanceof ForStmt) || (node instanceof SwitchStmt);
@@ -154,6 +161,14 @@ public class CFG {
             }
         }
         return null;
+    }
+
+    CFGNode findNode(Node node) {
+        return this.findNodeInList(this.vertexList, node);
+    }
+
+    private boolean containNode(Node node) {
+        return this.findNode(node) != null;
     }
 
 }
