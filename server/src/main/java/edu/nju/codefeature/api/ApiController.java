@@ -1,6 +1,7 @@
 package edu.nju.codefeature.api;
 
 import edu.nju.codefeature.tools.FileTools;
+import edu.nju.codefeature.tools.PythonTools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -47,50 +48,16 @@ public class ApiController {
 
     @PostMapping("/train")
     public String train(@RequestBody TrainRequest request) {
-        StringBuilder builder = new StringBuilder("[");
         String[] params = {pythonPath, trainPath, request.getOutputPath(), request.getModelPath()
                 , String.valueOf(request.getEpochNum()), String.valueOf(request.getFeatureSize())};
 
-        try {
-            Process proc = Runtime.getRuntime().exec(String.join(" ", params));
-            //用输入输出流来截取结果
-            BufferedReader in = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-            String line = in.readLine();
-            while (true) {
-                System.out.println(line);
-                builder.append(line);
-                if ((line = in.readLine()) != null) {
-                    builder.append(",");
-                } else {
-                    break;
-                }
-            }
-            in.close();
-            proc.waitFor();
-        }  catch (InterruptedException | IOException e) {
-            e.printStackTrace();
-        }
-        builder.append("]");
-
-        return builder.toString().replace("'", "\"");
+        return PythonTools.execute(params);
     }
 
     @GetMapping("/modelNum")
     public String getModelNumber() {
         String[] params = {pythonPath, trainPath};
-        String line = null;
-        try {
-            Process proc = Runtime.getRuntime().exec(String.join(" ", params));
-            //用输入输出流来截取结果
-            BufferedReader in = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-            line = in.readLine();
-
-            in.close();
-            proc.waitFor();
-        }  catch (InterruptedException | IOException e) {
-            e.printStackTrace();
-        }
-        return "{\"modelNum\": " + line + "}";
+        return PythonTools.execute(params);
     }
 
     @PostMapping("/predict")
@@ -101,20 +68,7 @@ public class ApiController {
         FileTools.saveFeature(new File(request.getJavaFilePath()), parentPath);
 
         String[] params = {pythonPath, predictPath, parentPath};
-        String line = null;
-        System.out.println(String.join(" ", params));
-        try {
-            Process proc = Runtime.getRuntime().exec(String.join(" ", params));
-            //用输入输出流来截取结果
-            BufferedReader in = new BufferedReader(new InputStreamReader(proc.getInputStream()));
-            line = in.readLine();
-            System.out.println(line);
-            line = line.replace("'", "\"");
-            in.close();
-            proc.waitFor();
-        }  catch (InterruptedException | IOException e) {
-            e.printStackTrace();
-        }
+        String line = PythonTools.execute(params);
 
         new File(parentPath + fileSeparator + "AST.csv").delete();
         return line;

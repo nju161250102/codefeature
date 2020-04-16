@@ -2,6 +2,7 @@ from keras.models import Sequential
 from keras.layers import Conv1D, MaxPool1D, GlobalAveragePooling1D, Dropout
 from keras.layers import Dense, Flatten, LSTM
 import os
+import json
 import sys
 import pandas as pd
 import numpy as np
@@ -9,14 +10,14 @@ import numpy as np
 seq_len = 256
 
 
-def read_csv(path):
+def read_wordVector(path, type):
     x_data = None
     y_data = []
     for index, s in enumerate(["False", "Positive"]):
-        for f in os.listdir(os.path.join(path, s)):
-            data = pd.read_csv(os.path.join(path, s, f), header=None)
+        for f in os.listdir(os.path.join(path, s, type)):
+            data = pd.read_csv(os.path.join(path, s, type, f), header=None)
             line = np.array(data.values)
-            # print(f, line.shape)
+
             line = np.pad(line, ((0, seq_len-line.shape[0]), (0, 0)))
             if x_data is not None:
                 x_data = np.concatenate((x_data, [line]))
@@ -56,23 +57,34 @@ def LSTM_model(size):
 
 
 if __name__ == "__main__":
-    model_dict = {
-        "CNN": "",
-        "LSTM": ""
-    }
 
     if len(sys.argv) < 2:
-        print(str(len(model_dict)))
+        print(json.dumps({"modelNum": 2}))
     else:
-        x_data, y_data = read_csv(sys.argv[1])
+        wordVec_x, wordVec_y = read_wordVector(sys.argv[1], "WordVector")
         model_path = sys.argv[2]
         epoch_num = int(sys.argv[3])
         feature_size = int(sys.argv[4])
-        model_dict["CNN"] = CNN(feature_size)
-        model_dict["LSTM"] = LSTM_model(feature_size)
 
-        for name, model in model_dict.items():
-            history = model.fit(x_data, y_data, batch_size=8, epochs=epoch_num, verbose=0).history
-            history["name"] = name
-            model.save(os.path.join(model_path, name + ".h5"))
-            print(history)
+        model_list = [{
+            "name": "CNN",
+            "model": CNN(feature_size),
+            "x_data": wordVec_x,
+            "y_data": wordVec_y,
+        },{
+            "name": "LSTM",
+            "model": LSTM_model(feature_size),
+            "x_data": wordVec_x,
+            "y_data": wordVec_y,
+        }]
+
+        result = []
+        for item in model_list:
+            model = item["model"]
+            history = model.fit(item["x_data"], item["y_data"], batch_size=8, epochs=epoch_num, verbose=0).history
+            history["name"] = item["name"]
+            model.save(os.path.join(model_path, item["name"] + ".h5"))
+            result.append(str(history))
+
+        result = "[" + ",".join(result) + "]"
+        print(result.replace("'", "\""))

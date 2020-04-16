@@ -33,6 +33,8 @@ class ApiControllerTest {
     private String modelPath;
     @Value("${testConfig.featureSize}")
     private int featureSize;
+    @Value("${testConfig.epochNum}")
+    private int epochNum;
 
     @Test
     void extract() throws Exception{
@@ -46,7 +48,14 @@ class ApiControllerTest {
     }
 
     @Test
-    void train() {
+    void train() throws Exception {
+        String request = String.format("{\"modelPath\":\"%s\",\"featureSize\":%d,\"outputPath\":\"%s\",\"epochNum\":%d}"
+                , modelPath, featureSize, outputPath, epochNum);
+        mvc.perform(post("/api/train")
+                .content(request)
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andDo(MockMvcResultHandlers.print());
     }
 
     @Test
