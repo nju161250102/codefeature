@@ -1,8 +1,17 @@
 server:
   port: 8080
 
+logging:
+  level:
+    root: warn
+    edu:
+      nju:
+        codefeature: info
+        codefeature.tools: info
+
 pythonConfig:
   path: /usr/bin/python3.6
+#  path: /usr/bin/python3
   train: ./Train.py
   predict: ./Predict.py
 
@@ -10,5 +19,7 @@ testConfig:
   dataPath: /home/qian/Desktop/CWE15/test
   outputPath: /home/qian/Desktop/CWE15/test/output
   modelPath: /home/qian/Desktop/CWE15/test/model
+#  dataPath: /root/version1/
+#  outputPath: /root/version1/output/
   featureSize: 16
   epochNum: 10

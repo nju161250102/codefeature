@@ -22,9 +22,13 @@ public class CFGFeature {
     }
 
     public static BasicBlockGraph extractBasicBlocks(MethodDeclaration method) {
-        CFG cfg = extract(method);
-        logger.info("Extract Basic Graph From " + method.getNameAsString());
-        return new BasicBlockGraph(cfg);
+        try {
+            CFG cfg = extract(method);
+            logger.info("Extract Basic Graph From " + method.getNameAsString());
+            return new BasicBlockGraph(cfg);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
 }

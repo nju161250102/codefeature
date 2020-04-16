@@ -15,7 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class FileTools {
@@ -36,10 +36,32 @@ public class FileTools {
         }
     }
 
+    public static List<String> searchJavaFile(String rootPath) {
+        List<String> result = new ArrayList<>();
+
+        LinkedList<File> queue = new LinkedList<>();
+        queue.add(new File(rootPath));
+        while (queue.size() > 0) {
+            File dir = queue.pop();
+            if ((! dir.exists()) || dir.isFile()) continue;
+            for (File file: dir.listFiles()) {
+                if (file.isDirectory()) {
+                    queue.push(file);
+                } else {
+                    if (file.getName().matches("\\w*.java"))
+                    result.add(file.getAbsolutePath());
+                }
+            }
+        }
+        return result;
+    }
+
     public static ExtractResult saveFeature(File javaFile, String outputDir) {
         ExtractResult extractResult = new ExtractResult();
         String javaFileName = javaFile.getName();
         extractResult.setName(javaFileName);
+
+        logger.info("File: " + javaFileName);
         try {
             CompilationUnit cu = StaticJavaParser.parse(javaFile);
             List<MethodDeclaration> methodList = cu.findAll(MethodDeclaration.class);
@@ -54,8 +76,13 @@ public class FileTools {
                     FileTools.saveASTWords(astWords, outputDir, outputName);
                     FileTools.saveWordVector(astWords, outputDir, outputName);
                     BasicBlockGraph graph = CFGFeature.extractBasicBlocks(m);
-                    extractResult.setBasicBlock(graph.getBasicBlocks().size());
-                    FileTools.saveGraph(graph, outputDir, outputName);
+                    if (graph == null) {
+                        extractResult.setSuccess(false);
+                        extractResult.setBasicBlock(0);
+                    } else {
+                        extractResult.setBasicBlock(graph.getBasicBlocks().size());
+                        FileTools.saveGraph(graph, outputDir, outputName);
+                    }
                 } catch (IOException e) {
                     e.printStackTrace();
                 }

@@ -31,13 +31,15 @@ public class ApiController {
         String targetPath = request.getOutputPath();
         int vectorSize = request.getFeatureSize();
         List<ExtractResult> result = new ArrayList<>();
-
         for (String type : new String[]{"Positive", "False"}) {
             String outputDir = targetPath + fileSeparator + type;
             FileTools.checkOutputDir(outputDir);
             FileTools.vectorSize = vectorSize;
-            for (String path: getFilePath(parentPath + fileSeparator + type)) {
-                File javaFile = new File(path);
+            List<String> javaFilePaths = FileTools.searchJavaFile(parentPath + fileSeparator + type);
+            logger.info("The count of java files: " + javaFilePaths.size());
+            for (int i = 0; i < javaFilePaths.size(); i ++) {
+                File javaFile = new File(javaFilePaths.get(i));
+                logger.info("The index of File: " + i);
                 ExtractResult extractResult = FileTools.saveFeature(javaFile, outputDir);
                 extractResult.setFlag("Positive".equals(type) ? "正报" : "误报");
                 result.add(extractResult);
@@ -74,20 +76,4 @@ public class ApiController {
         return line;
     }
 
-    private List<String> getFilePath(String path) {
-        List<String> result = new ArrayList<>();
-
-        File parentPath = new File(path);
-        if ((! parentPath.exists()) || parentPath.isFile()) return result;
-
-        for (File f1: parentPath.listFiles()) {
-            if ((! f1.exists()) || f1.isFile()) continue;
-            for (File f2 : f1.listFiles()) {
-                if ((! f2.exists()) || f2.isFile()) continue;
-                File javaFile = f2.listFiles()[0];
-                result.add(javaFile.getAbsolutePath());
-            }
-        }
-        return result;
-    }
 }
