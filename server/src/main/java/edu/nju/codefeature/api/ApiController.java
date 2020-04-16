@@ -1,15 +1,9 @@
 package edu.nju.codefeature.api;
 
-import com.github.javaparser.ParseProblemException;
-import com.github.javaparser.StaticJavaParser;
-import com.github.javaparser.ast.CompilationUnit;
-import com.github.javaparser.ast.body.MethodDeclaration;
-import edu.nju.codefeature.ast.ASTFeature;
-import edu.nju.codefeature.tools.CommentTools;
-import edu.nju.codefeature.tools.SymbolTools;
-import edu.nju.codefeature.word2vec.Word2VecModel;
+import edu.nju.codefeature.tools.FileTools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.*;
@@ -22,67 +16,31 @@ public class ApiController {
 
     private static final Logger logger = LoggerFactory.getLogger(ApiController.class);
 
-    private final String pythonPath = "/usr/bin/python3.6";
-    private final String trainPath = "./Train.py";
-    private final String predictPath = "./Predict.py";
+    @Value("${pythonConfig.path}")
+    private String pythonPath;
+    @Value("${pythonConfig.train}")
+    private String trainPath;
+    @Value("${pythonConfig.predict}")
+    private String predictPath;
 
     @PostMapping("/extract")
     public List<ExtractResult> extract(@RequestBody ExtractRequest request) {
         String fileSeparator = File.separator;
         String parentPath = request.getDataPath();
         String targetPath = request.getOutputPath();
+        int vectorSize = request.getFeatureSize();
         List<ExtractResult> result = new ArrayList<>();
 
-        try {
-            for (String type : new String[]{"Positive", "False"}) {
-                BufferedWriter bw1 = new BufferedWriter(new FileWriter(targetPath + fileSeparator + type + ".csv"));
-                for (String path: getFilePath(parentPath + fileSeparator + type)) {
-                    ExtractResult extractResult = new ExtractResult();
-
-                    File javaFile = new File(path);
-                    String name = javaFile.getName().split("\\.")[0];
-                    new File(targetPath + fileSeparator + type).mkdir();
-                    BufferedWriter bw2 = new BufferedWriter(new FileWriter( targetPath + fileSeparator + type + fileSeparator + name + ".csv"));
-                    try {
-                        logger.info("Start parse: " + javaFile.getName());
-                        CompilationUnit cu = StaticJavaParser.parse(javaFile);
-                        List<MethodDeclaration> methodList = cu.findAll(MethodDeclaration.class);
-                        for (MethodDeclaration m : methodList) {
-                            if (m.isConstructorDeclaration()) continue;
-                            CommentTools.removeComment(m);
-                            SymbolTools.nameSubstitute(m);
-                            List<String> astWords = ASTFeature.extract(m);
-                            extractResult.setSequence(astWords.size());
-                            bw1.write(name);
-                            for (String s: astWords) {
-                                bw1.write("," + s);
-                            }
-                            bw1.newLine();
-                            for (List<Double> line: Word2VecModel.transformWords(astWords)) {
-                                for (int i = 0; i < line.size(); i++) {
-                                    if (i == 0) bw2.write(line.get(0).toString());
-                                    else bw2.write("," + line.get(i));
-                                }
-                                bw2.newLine();
-                            }
-                        }
-                        bw2.close();
-                    } catch (FileNotFoundException e1) {
-                        logger.error("File Not Found: " + javaFile.getPath());
-                        extractResult.setSuccess(false);
-                        e1.printStackTrace();
-                    } catch (ParseProblemException e2) {
-                        logger.error("Parser Error: " + javaFile.getName());
-                        extractResult.setSuccess(false);
-                    }
-                    extractResult.setName(name);
-                    extractResult.setFlag(type);
-                    result.add(extractResult);
-                }
-                bw1.close();
+        for (String type : new String[]{"Positive", "False"}) {
+            String outputDir = targetPath + fileSeparator + type;
+            FileTools.checkOutputDir(outputDir);
+            FileTools.vectorSize = vectorSize;
+            for (String path: getFilePath(parentPath + fileSeparator + type)) {
+                File javaFile = new File(path);
+                ExtractResult extractResult = FileTools.saveFeature(javaFile, outputDir);
+                extractResult.setFlag("Positive".equals(type) ? "正报" : "误报");
+                result.add(extractResult);
             }
-        } catch (IOException e3) {
-            e3.printStackTrace();
         }
         return result;
     }
@@ -140,35 +98,7 @@ public class ApiController {
         String fileSeparator = File.separator;
         String parentPath = request.getModelPath();
 
-        try {
-            BufferedWriter astWriter = new BufferedWriter(new FileWriter( parentPath + fileSeparator + "AST.csv"));
-            try {
-                logger.info("Start parse: " + request.getJavaFilePath());
-                CompilationUnit cu = StaticJavaParser.parse(new File(request.getJavaFilePath()));
-                List<MethodDeclaration> methodList = cu.findAll(MethodDeclaration.class);
-                for (MethodDeclaration m : methodList) {
-                    if (m.isConstructorDeclaration()) continue;
-                    CommentTools.removeComment(m);
-                    SymbolTools.nameSubstitute(m);
-                    List<String> astWords = ASTFeature.extract(m);
-                    for (List<Double> line: Word2VecModel.transformWords(astWords)) {
-                        for (int i = 0; i < line.size(); i++) {
-                            if (i == 0) astWriter.write(line.get(0).toString());
-                            else astWriter.write("," + line.get(i));
-                        }
-                        astWriter.newLine();
-                    }
-                }
-                astWriter.close();
-            } catch (FileNotFoundException e1) {
-                logger.error("File Not Found: " + request.getJavaFilePath());
-                e1.printStackTrace();
-            } catch (ParseProblemException e2) {
-                logger.error("Parser Error: " + request.getJavaFilePath());
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        FileTools.saveFeature(new File(request.getJavaFilePath()), parentPath);
 
         String[] params = {pythonPath, predictPath, parentPath};
         String line = null;

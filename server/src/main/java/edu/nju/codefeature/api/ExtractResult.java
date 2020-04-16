@@ -5,7 +5,7 @@ import lombok.Setter;
 
 @Setter
 @Getter
-class ExtractResult {
+public class ExtractResult {
 
     private String name = "";
     private int sequence = 0;
