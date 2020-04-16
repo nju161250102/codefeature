@@ -1,0 +1,13 @@
+server:
+  port: 8080
+
+pythonConfig:
+  path: /usr/bin/python3.6
+  train: ./Train.py
+  predict: ./Predict.py
+
+testConfig:
+  dataPath: /home/qian/Desktop/CWE15/test
+  outputPath: /home/qian/Desktop/CWE15/test/output
+  modelPath: /home/qian/Desktop/CWE15/test/model
+  featureSize: 16

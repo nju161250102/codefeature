@@ -15,14 +15,14 @@ import java.util.stream.Collectors;
 
 public class Word2VecModel {
 
-    public static List<List<Double>> transformWords(List<String> words) {
+    public static List<List<Double>> transformWords(List<String> words, int vectorSize) {
         SentenceIterator iter = new CollectionSentenceIterator(words);
         iter.setPreProcessor(String::toLowerCase);
         TokenizerFactory t = new DefaultTokenizerFactory();
         Word2Vec vec = new Word2Vec.Builder()
                 .minWordFrequency(1)
                 .iterations(1)
-                .layerSize(16)
+                .layerSize(vectorSize)
                 .seed(42)
                 .windowSize(5)
                 .iterate(iter)
@@ -36,7 +36,7 @@ public class Word2VecModel {
                 .collect(Collectors.toList());
     }
 
-    public static List<List<Double>> transformParagraph(List<String> words) {
+    public static List<List<Double>> transformParagraph(List<String> words, int vectorSize) {
         SentenceIterator iter = new CollectionSentenceIterator(words);
         TokenizerFactory t = new DefaultTokenizerFactory();
         t.setTokenPreProcessor(new CommonPreprocessor());
@@ -46,7 +46,7 @@ public class Word2VecModel {
                 .minWordFrequency(1)
                 .iterations(5)
                 .epochs(1)
-                .layerSize(16)
+                .layerSize(vectorSize)
                 .learningRate(0.025)
                 .labelsSource(source)
                 .windowSize(5)
