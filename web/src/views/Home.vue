@@ -24,7 +24,7 @@
                                               label="特征向量大小" dense outlined></v-text-field>
                             </v-col>
                             <v-col cols="12" md="3">
-                                <v-btn color="primary" dense @click="extract">
+                                <v-btn color="primary" :disabled="extractButton" dense @click="extract">
                                     开始提取
                                 </v-btn>
                             </v-col>
@@ -57,7 +57,7 @@
                                               label="训练次数" dense outlined></v-text-field>
                             </v-col>
                             <v-col cols="12" md="3">
-                                <v-btn color="primary" dense @click="train">
+                                <v-btn color="primary" :disabled="trainButton" dense @click="train">
                                     开始训练
                                 </v-btn>
                             </v-col>
@@ -70,24 +70,31 @@
                 <v-btn color="primary" :disabled="modelNum === 0" @click="stepNum = 3">
                     下一步
                 </v-btn>
-                <v-btn text>Cancel</v-btn>
+                <v-btn text @click="stepNum = 1">上一步</v-btn>
             </v-stepper-content>
 
             <v-stepper-content step="3">
-                <v-card
-                        class="mb-12"
-                        color="grey lighten-1"
-                        height="200px"
-                ></v-card>
-
-                <v-btn
-                        color="primary"
-                        @click="e1 = 1"
-                >
-                    Continue
-                </v-btn>
-
-                <v-btn text>Cancel</v-btn>
+                <v-card class="mb-12" color="grey lighten-4">
+                    <v-container>
+                        <v-row>
+                            <v-col cols="12" md="3">
+                                <v-text-field v-model="javaFilePath" label="文件地址" dense outlined></v-text-field>
+                            </v-col>
+                            <v-col cols="12" md="3">
+                                <v-btn color="primary" :disabled="predictButton" dense @click="predict">
+                                    检测
+                                </v-btn>
+                            </v-col>
+                        </v-row>
+                        <v-row>
+                            <v-col cols="12" md="12">
+                                <v-data-table :headers="predictHeaders" :items="predictResult" :items-per-page="5">
+                                </v-data-table>
+                            </v-col>
+                        </v-row>
+                    </v-container>
+                </v-card>
+                <v-btn text @click="stepNum = 2">上一步</v-btn>
             </v-stepper-content>
         </v-stepper-items>
     </v-stepper>
@@ -98,6 +105,9 @@
         name: 'Home',
         data() {
             return {
+                extractButton: false,
+                trainButton: false,
+                predictButton: false,
                 stepNum: 1,
                 dataPath: '/home/qian/Desktop/CWE15/test',
                 outputPath: '/home/qian/Desktop/CWE15/test/output',
@@ -106,7 +116,7 @@
                 epochNum: 10,
                 modelNum: 0,
                 numberRules: [
-                    v => !!v || '请输入特征向量的大小',
+                    v => !!v || '请输入数字',
                     v => isFinite(v) || '必须输入数字',
                 ],
                 headers: [{
@@ -126,22 +136,40 @@
                     value: 'flag',
                     sortable: false
                 }],
-                desserts: [{"name":"CWE89_SQL_Injection__connect_tcp_execute_05","sequence":159,"basicBlock":0,"flag":"Positive","success":false},{"name":"CWE89_SQL_Injection__connect_tcp_execute_03","sequence":163,"basicBlock":0,"flag":"Positive","success":true},{"name":"CWE89_SQL_Injection__connect_tcp_execute_08","sequence":159,"basicBlock":0,"flag":"Positive","success":true},{"name":"CWE89_SQL_Injection__connect_tcp_execute_12","sequence":234,"basicBlock":0,"flag":"Positive","success":true},{"name":"CWE89_SQL_Injection__connect_tcp_execute_04","sequence":159,"basicBlock":0,"flag":"Positive","success":true},{"name":"CWE89_SQL_Injection__connect_tcp_execute_01","sequence":153,"basicBlock":0,"flag":"Positive","success":true},{"name":"CWE89_SQL_Injection__connect_tcp_execute_09","sequence":161,"basicBlock":0,"flag":"Positive","success":true},{"name":"CWE89_SQL_Injection__connect_tcp_execute_11","sequence":161,"basicBlock":0,"flag":"Positive","success":true},{"name":"CWE89_SQL_Injection__connect_tcp_execute_10","sequence":161,"basicBlock":0,"flag":"Positive","success":true},{"name":"CWE89_SQL_Injection__connect_tcp_execute_02","sequence":157,"basicBlock":0,"flag":"Positive","success":true},{"name":"CWE80_XSS__Servlet_URLConnection_68a","sequence":67,"basicBlock":0,"flag":"False","success":true},{"name":"CWE80_XSS__Servlet_URLConnection_68a","sequence":7,"basicBlock":0,"flag":"False","success":true},{"name":"CWE80_XSS__Servlet_URLConnection_74b","sequence":14,"basicBlock":0,"flag":"False","success":true},{"name":"CWE80_XSS__Servlet_URLConnection_61a","sequence":15,"basicBlock":0,"flag":"False","success":true},{"name":"CWE80_XSS__Servlet_URLConnection_61a","sequence":15,"basicBlock":0,"flag":"False","success":true},{"name":"CWE80_XSS__Servlet_URLConnection_73b","sequence":14,"basicBlock":0,"flag":"False","success":true},{"name":"CWE80_XSS__Servlet_URLConnection_54e","sequence":9,"basicBlock":0,"flag":"False","success":true},{"name":"CWE80_XSS__Servlet_URLConnection_75b","sequence":71,"basicBlock":0,"flag":"False","success":true},{"name":"CWE80_XSS__Servlet_URLConnection_75b","sequence":71,"basicBlock":0,"flag":"False","success":true},{"name":"CWE80_XSS__Servlet_URLConnection_81_bad","sequence":9,"basicBlock":0,"flag":"False","success":true},{"name":"CWE80_XSS__Servlet_URLConnection_72b","sequence":14,"basicBlock":0,"flag":"False","success":true},{"name":"CWE80_XSS__Servlet_URLConnection_71b","sequence":13,"basicBlock":0,"flag":"False","success":true},{"name":"CWE80_XSS__Servlet_URLConnection_53d","sequence":9,"basicBlock":0,"flag":"False","success":true},{"name":"CWE80_XSS__Servlet_URLConnection_66b","sequence":13,"basicBlock":0,"flag":"False","success":true},{"name":"CWE80_XSS__Servlet_URLConnection_52c","sequence":9,"basicBlock":0,"flag":"False","success":true}],
-                options: []
+                desserts: [],
+                options: [],
+                javaFilePath: '/home/qian/Desktop/CWE15/test/False/',
+                predictHeaders: [{
+                    text: '文件名',
+                    value: 'name',
+                    sortable: true
+                }, {
+                    text: 'CNN',
+                    value: 'CNN',
+                    sortable: false
+                }, {
+                    text: 'LSTM',
+                    value: 'LSTM',
+                    sortable: false
+                }],
+                predictResult: []
             }
         },
         methods: {
             extract () {
+                this.extractButton = true
                 this.$http.post('/extract', {
                     dataPath: this.dataPath,
                     outputPath: this.outputPath,
                     featureSize: this.featureSize
                 }).then((response) => {
                     this.desserts = response.data
+                    this.extractButton = false
                 })
             },
             train () {
                 let echarts = require('echarts')
+                this.trainButton = true
                 this.$http.get('/modelNum')
                     .then((response) => {
                         this.modelNum = response.data.modelNum
@@ -174,6 +202,20 @@
                             }
                         })
                     })
+                    .finally(() => {
+                        this.trainButton = false
+                    })
+            },
+            predict () {
+                this.predictButton = true
+                this.$http.post('/predict', {
+                    modelPath: this.modelPath,
+                    javaFilePath: this.javaFilePath
+                }).then((response) => {
+                    this.predictResult = response.data
+                }).finally(() => {
+                    this.predictButton = false
+                })
             },
             toSeries(arr) {
                 let a = []

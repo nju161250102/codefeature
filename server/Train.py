@@ -1,6 +1,7 @@
 from keras.models import Sequential
 from keras.layers import Conv1D, MaxPool1D, GlobalAveragePooling1D, Dropout
 from keras.layers import Dense, Flatten, LSTM
+from keras.callbacks import Callback
 import os
 import json
 import sys
@@ -18,7 +19,10 @@ def read_wordVector(path, type):
             data = pd.read_csv(os.path.join(path, s, type, f), header=None)
             line = np.array(data.values)
 
-            line = np.pad(line, ((0, seq_len-line.shape[0]), (0, 0)))
+            if seq_len > line.shape[0]:
+                line = np.pad(line, ((0, seq_len-line.shape[0]), (0, 0)))
+            else:
+                line = line[:seq_len]
             if x_data is not None:
                 x_data = np.concatenate((x_data, [line]))
             else:
@@ -48,12 +52,20 @@ def LSTM_model(size):
     model = Sequential()
     model.add(LSTM(size))
     model.add(Dense(32, activation='relu'))
-    model.add(Dense(32, activation='relu'))
+    model.add(Dense(16, activation='relu'))
     model.add(Dense(2, activation='softmax'))
     model.compile(loss='categorical_crossentropy',
                   optimizer='adam',
                   metrics=['accuracy'])
     return model
+
+
+class LossHistory(Callback):
+    def on_train_begin(self, logs={}):
+        self.losses = []
+
+    def on_batch_end(self, batch, logs={}):
+        self.losses.append(logs.get('loss'))
 
 
 if __name__ == "__main__":
@@ -81,6 +93,7 @@ if __name__ == "__main__":
         result = []
         for item in model_list:
             model = item["model"]
+            #  callbacks=[LossHistory()]
             history = model.fit(item["x_data"], item["y_data"], batch_size=8, epochs=epoch_num, verbose=0).history
             history["name"] = item["name"]
             model.save(os.path.join(model_path, item["name"] + ".h5"))

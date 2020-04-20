@@ -65,14 +65,21 @@ public class ApiController {
     @PostMapping("/predict")
     public String predict(@RequestBody PredictRequest request) {
         String fileSeparator = File.separator;
-        String parentPath = request.getModelPath();
+        String modelPath = request.getModelPath();
 
-        FileTools.saveFeature(new File(request.getJavaFilePath()), parentPath);
+        FileTools.checkOutputDir(modelPath);
+        List<String> javaFilePaths = FileTools.searchJavaFile(request.getJavaFilePath());
+        for (String fileName: javaFilePaths) {
+            FileTools.saveFeature(new File(fileName), modelPath);
+        }
 
-        String[] params = {pythonPath, predictPath, parentPath};
+        String[] params = {pythonPath, predictPath, modelPath};
         String line = PythonTools.execute(params);
 
-        new File(parentPath + fileSeparator + "AST.csv").delete();
+        for (String type: new String[]{"Text", "WordVector", "Edge", "DeepWalk", "ParagraphVec"}) {
+
+            new File(modelPath + fileSeparator + type).delete();
+        }
         return line;
     }
 

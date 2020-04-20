@@ -58,7 +58,7 @@ public class FileTools {
 
     public static ExtractResult saveFeature(File javaFile, String outputDir) {
         ExtractResult extractResult = new ExtractResult();
-        String javaFileName = javaFile.getName();
+        String javaFileName = javaFile.getName().split("\\.")[0];
         extractResult.setName(javaFileName);
 
         logger.info("File: " + javaFileName);

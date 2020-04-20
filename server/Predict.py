@@ -7,25 +7,43 @@ import numpy as np
 seq_len = 256
 
 
+def read_wordVector(path, type):
+    x_data = None
+    file_name = []
+    for f in os.listdir(os.path.join(path, type)):
+        data = pd.read_csv(os.path.join(path, type, f), header=None)
+        line = np.array(data.values)
+
+        line = np.pad(line, ((0, seq_len-line.shape[0]), (0, 0)))
+        if x_data is not None:
+            x_data = np.concatenate((x_data, [line]))
+        else:
+            x_data = np.array([line])
+        file_name.append(f)
+
+    return x_data, file_name
+
+
 if __name__ == "__main__":
     model_path = sys.argv[1]
-    result_list = []
+    result_dict = {}
 
     for f in os.listdir(model_path):
-        if f.split(".")[1] != "h5":
+        if len(f.split(".")) != 2 or f.split(".")[1] != "h5":
             continue
 
-        name = f.split(".")[0]
+        model_name = f.split(".")[0]
         model = load_model(os.path.join(model_path, f))
         result = 0
 
-        if name == "CNN" or name == "LSTM":
-            data = pd.read_csv(os.path.join(model_path, "AST.csv"), header=None)
-            data = np.array(data.values)
-            data = np.pad(data, ((0, seq_len - data.shape[0]), (0, 0)))
-            result = model.predict(np.array([data]))[0][0]
-        result_list.append({
-            "name": name,
-            "p": result
-        })
-    print(result_list)
+        if model_name == "CNN" or model_name == "LSTM":
+            data, file_names = read_wordVector(model_path, "WordVector")
+            predict_y = model.predict(data)
+            for index, file_name in enumerate(file_names):
+                if file_name not in result_dict:
+                    result_dict[file_name] = {}
+                    result_dict[file_name]["name"] = file_name.split(".")[0]
+                result_dict[file_name][model_name] = predict_y[index][0]
+
+    result = str(list(result_dict.values()))
+    print(result.replace("'", "\""))

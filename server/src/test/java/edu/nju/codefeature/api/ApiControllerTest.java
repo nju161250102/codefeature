@@ -12,6 +12,8 @@ import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
 
+import java.io.File;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -66,6 +68,13 @@ class ApiControllerTest {
     }
 
     @Test
-    void predict() {
+    void predict() throws Exception {
+        String request = String.format("{\"modelPath\":\"%s\", \"javaFilePath\":\"%s\"}"
+                , modelPath, dataPath + File.separator + "False/");
+        mvc.perform(post("/api/predict")
+                .content(request)
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andDo(MockMvcResultHandlers.print());
     }
 }
