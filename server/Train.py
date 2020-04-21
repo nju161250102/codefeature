@@ -9,14 +9,31 @@ import pandas as pd
 import numpy as np
 
 seq_len = 256
+batch_size = 8
 
 
-def read_wordVector(path, type):
-    x_data = None
-    y_data = []
+def get_file_paths(path, type):
+    result = []
     for index, s in enumerate(["False", "Positive"]):
         for f in os.listdir(os.path.join(path, s, type)):
-            data = pd.read_csv(os.path.join(path, s, type, f), header=None)
+            result.append((os.path.join(path, s, type, f), index))
+    return result
+
+
+def data_generate(file_paths):
+    while True:
+        i = 0
+        x_data = None
+        y_data = []
+        for path, label in file_paths:
+            if i == batch_size:
+                yield (x_data, np.array(y_data))
+                x_data = None
+                y_data = []
+                i = 0
+                continue
+
+            data = pd.read_csv(path, header=None)
             line = np.array(data.values)
 
             if seq_len > line.shape[0]:
@@ -28,9 +45,10 @@ def read_wordVector(path, type):
             else:
                 x_data = np.array([line])
             l = [0, 0]
-            l[index] = 1
+            l[label] = 1
             y_data.append(l)
-    return x_data, np.array(y_data)
+
+            i += 1
 
 
 def CNN(size):
@@ -50,7 +68,7 @@ def CNN(size):
 
 def LSTM_model(size):
     model = Sequential()
-    model.add(LSTM(size))
+    model.add(LSTM(size, input_shape=(seq_len, size)))
     model.add(Dense(32, activation='relu'))
     model.add(Dense(16, activation='relu'))
     model.add(Dense(2, activation='softmax'))
@@ -73,7 +91,11 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print(json.dumps({"modelNum": 2}))
     else:
-        wordVec_x, wordVec_y = read_wordVector(sys.argv[1], "WordVector")
+        file_paths = get_file_paths(sys.argv[1], "WordVector")
+        data_size = len(file_paths)
+        # print(data_size)
+
+        generator = data_generate(file_paths)
         model_path = sys.argv[2]
         epoch_num = int(sys.argv[3])
         feature_size = int(sys.argv[4])
@@ -81,20 +103,18 @@ if __name__ == "__main__":
         model_list = [{
             "name": "CNN",
             "model": CNN(feature_size),
-            "x_data": wordVec_x,
-            "y_data": wordVec_y,
+            "generator": generator
         },{
             "name": "LSTM",
             "model": LSTM_model(feature_size),
-            "x_data": wordVec_x,
-            "y_data": wordVec_y,
+            "generator": generator
         }]
 
         result = []
         for item in model_list:
             model = item["model"]
             #  callbacks=[LossHistory()]
-            history = model.fit(item["x_data"], item["y_data"], batch_size=8, epochs=epoch_num, verbose=0).history
+            history = model.fit_generator(item["generator"], steps_per_epoch=int(data_size/batch_size), epochs=epoch_num, verbose=0).history
             history["name"] = item["name"]
             model.save(os.path.join(model_path, item["name"] + ".h5"))
             result.append(str(history))
