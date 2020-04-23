@@ -45,9 +45,8 @@ public class Word2VecModel {
         ParagraphVectors vec = new ParagraphVectors.Builder()
                 .minWordFrequency(1)
                 .iterations(5)
-                .epochs(1)
                 .layerSize(vectorSize)
-                .learningRate(0.025)
+                .learningRate(0.05)
                 .labelsSource(source)
                 .windowSize(5)
                 .iterate(iter)
@@ -56,9 +55,7 @@ public class Word2VecModel {
                 .sampling(0)
                 .build();
         vec.fit();
-
         return words.stream()
-                .filter(vec::hasWord)
                 .map(w -> Arrays.stream(vec.inferVector(w).toDoubleVector()).boxed().collect(Collectors.toList()))
                 .collect(Collectors.toList());
     }

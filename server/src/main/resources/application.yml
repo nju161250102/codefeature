@@ -12,8 +12,8 @@ logging:
 pythonConfig:
   path: /usr/bin/python3.6
 #  path: /usr/bin/python3
-  train: ./Train.py
-  predict: ./Predict.py
+  train: ./python/Train.py
+  predict: ./python/Predict.py
 
 testConfig:
   dataPath: /home/qian/Desktop/CWE15/test
