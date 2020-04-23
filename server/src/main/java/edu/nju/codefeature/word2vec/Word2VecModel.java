@@ -9,6 +9,7 @@ import org.deeplearning4j.text.tokenization.tokenizer.preprocessor.CommonPreproc
 import org.deeplearning4j.text.tokenization.tokenizerfactory.DefaultTokenizerFactory;
 import org.deeplearning4j.text.tokenization.tokenizerfactory.TokenizerFactory;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -16,48 +17,58 @@ import java.util.stream.Collectors;
 public class Word2VecModel {
 
     public static List<List<Double>> transformWords(List<String> words, int vectorSize) {
-        SentenceIterator iter = new CollectionSentenceIterator(words);
-        iter.setPreProcessor(String::toLowerCase);
-        TokenizerFactory t = new DefaultTokenizerFactory();
-        Word2Vec vec = new Word2Vec.Builder()
-                .minWordFrequency(1)
-                .iterations(1)
-                .layerSize(vectorSize)
-                .seed(42)
-                .windowSize(5)
-                .iterate(iter)
-                .tokenizerFactory(t)
-                .build();
+        try {
+            SentenceIterator iter = new CollectionSentenceIterator(words);
+            iter.setPreProcessor(String::toLowerCase);
+            TokenizerFactory t = new DefaultTokenizerFactory();
+            Word2Vec vec = new Word2Vec.Builder()
+                    .minWordFrequency(1)
+                    .iterations(1)
+                    .layerSize(vectorSize)
+                    .seed(42)
+                    .windowSize(5)
+                    .iterate(iter)
+                    .tokenizerFactory(t)
+                    .build();
 
-        vec.fit();
-        return words.stream()
-                .filter(vec::hasWord)
-                .map(w -> Arrays.stream(vec.getWordVector(w)).boxed().collect(Collectors.toList()))
-                .collect(Collectors.toList());
+            vec.fit();
+            return words.stream()
+                    .filter(vec::hasWord)
+                    .map(w -> Arrays.stream(vec.getWordVector(w)).boxed().collect(Collectors.toList()))
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            return new ArrayList<>();
+        }
     }
 
     public static List<List<Double>> transformParagraph(List<String> words, int vectorSize) {
-        SentenceIterator iter = new CollectionSentenceIterator(words);
-        TokenizerFactory t = new DefaultTokenizerFactory();
-        t.setTokenPreProcessor(new CommonPreprocessor());
-        LabelsSource source = new LabelsSource("DOC_");
+        try {
+            SentenceIterator iter = new CollectionSentenceIterator(words);
+            TokenizerFactory t = new DefaultTokenizerFactory();
+            t.setTokenPreProcessor(new CommonPreprocessor());
+            LabelsSource source = new LabelsSource("DOC_");
 
-        ParagraphVectors vec = new ParagraphVectors.Builder()
-                .minWordFrequency(1)
-                .iterations(5)
-                .layerSize(vectorSize)
-                .learningRate(0.05)
-                .labelsSource(source)
-                .windowSize(5)
-                .iterate(iter)
-                .trainWordVectors(false)
-                .tokenizerFactory(t)
-                .sampling(0)
-                .build();
-        vec.fit();
-        return words.stream()
-                .map(w -> Arrays.stream(vec.inferVector(w).toDoubleVector()).boxed().collect(Collectors.toList()))
-                .collect(Collectors.toList());
+            ParagraphVectors vec = new ParagraphVectors.Builder()
+                    .minWordFrequency(1)
+                    .iterations(5)
+                    .layerSize(vectorSize)
+                    .learningRate(0.05)
+                    .labelsSource(source)
+                    .windowSize(5)
+                    .iterate(iter)
+                    .trainWordVectors(false)
+                    .tokenizerFactory(t)
+                    .sampling(0)
+                    .build();
+            vec.fit();
+
+            return words.stream()
+                    .map(w -> Arrays.stream(vec.inferVector(w).toDoubleVector()).boxed().collect(Collectors.toList()))
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
     }
 
 }
