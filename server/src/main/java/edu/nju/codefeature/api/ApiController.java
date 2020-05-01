@@ -29,12 +29,12 @@ public class ApiController {
         String fileSeparator = File.separator;
         String parentPath = request.getDataPath();
         String targetPath = request.getOutputPath();
-        int vectorSize = request.getFeatureSize();
+        FileTools.vectorSize = request.getFeatureSize();
+
         List<ExtractResult> result = new ArrayList<>();
         for (String type : new String[]{"Positive", "False"}) {
             String outputDir = targetPath + fileSeparator + type;
             FileTools.checkOutputDir(outputDir);
-            FileTools.vectorSize = vectorSize;
             List<String> javaFilePaths = FileTools.searchJavaFile(parentPath + fileSeparator + type);
             logger.info("The count of java files: " + javaFilePaths.size());
             for (int i = 0; i < javaFilePaths.size(); i ++) {
@@ -43,6 +43,7 @@ public class ApiController {
                 ExtractResult extractResult = FileTools.saveFeature(javaFile, outputDir);
                 extractResult.setFlag("Positive".equals(type) ? "正报" : "误报");
                 result.add(extractResult);
+                FileTools.saveExtractResult(extractResult, outputDir);
             }
         }
         return result;

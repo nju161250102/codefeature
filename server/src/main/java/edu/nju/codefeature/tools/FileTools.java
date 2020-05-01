@@ -99,6 +99,19 @@ public class FileTools {
         return extractResult;
     }
 
+    public static void saveExtractResult(ExtractResult result, String outputDir) {
+        try {
+            String outputPath = outputDir + File.separator + "result.csv";
+            File file = new File(outputPath);
+            if (! file.exists()) file.createNewFile();
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outputPath, true)));
+            FileTools.saveList(writer, Arrays.asList(result.getName(), ""+result.getSequence(), ""+result.getBasicBlock(), result.getFlag(), ""+result.isSuccess()));
+            writer.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     private static void saveASTWords(List<String> astWords, String outputDir, String outputName) throws IOException {
         String outputPath = String.join(File.separator, new String[]{outputDir, "Text", outputName});
         BufferedWriter writer = new BufferedWriter(new FileWriter(outputPath));

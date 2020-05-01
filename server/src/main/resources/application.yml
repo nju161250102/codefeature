@@ -20,6 +20,6 @@ testConfig:
   outputPath: /home/qian/Desktop/CWE15/test/output
   modelPath: /home/qian/Desktop/CWE15/test/model
 #  dataPath: /root/version1/
-#  outputPath: /root/version1/output/
+#  outputPath: /root/version2/output/
   featureSize: 16
   epochNum: 10
