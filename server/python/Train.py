@@ -79,7 +79,12 @@ def graph_generate(output_path, node_type, graph_files):
 
             edge_data = []
             node_data = []
-            df = pd.read_csv(os.path.join(output_path, s, node_type, file_name), header=None)
+            edge_file = os.path.join(output_path, s, "Edge", file_name)
+            node_file = os.path.join(output_path, s, node_type, file_name)
+            if os.path.getsize(edge_file) == 0 or os.path.getsize(node_file) == 0:
+                continue
+
+            df = pd.read_csv(node_file, header=None)
             node_num = df.shape[0]
             for index, row in df.iterrows():
                 if index < node_len:
@@ -87,13 +92,15 @@ def graph_generate(output_path, node_type, graph_files):
             if node_num < node_len:
                 for i in range(node_num, node_len):
                     node_data.append([0 for j in range(16)])
-            node_data_list.append(node_data)
 
             for i in range(node_len):
                 edge_data.append([0 for j in range(node_len)])
+            df = pd.read_csv(edge_file, header=None)
             for index, row in df.iterrows():
                 if int(row[0]) < node_len and int(row[1]) < node_len:
                     edge_data[int(row[0])][int(row[1])] = 1
+
+            node_data_list.append(node_data)
             edge_data_list.append(edge_data)
 
             y_data.append([1, 0] if s == "False" else [0, 1])

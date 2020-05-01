@@ -64,11 +64,10 @@ public class BasicBlockGraph {
     public List<List<Integer>> getEdges() {
         List<List<Integer>> result = new ArrayList<>();
         for (int i = 0; i < this.basicBlocks.size(); i++) {
-            List<Integer> neightbours = new ArrayList<>();
+            result.add(Arrays.asList(i, i));
             for (BasicBlock block: this.basicBlocks.get(i).getNextBlocks()) {
-                neightbours.add(this.basicBlocks.indexOf(block));
+                result.add(Arrays.asList(i, this.basicBlocks.indexOf(block)));
             }
-            result.add(neightbours);
         }
         return result;
     }
