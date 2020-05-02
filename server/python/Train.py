@@ -4,8 +4,10 @@ from keras.layers import Input, Dense, Flatten, LSTM
 from keras.callbacks import Callback
 from keras_gcn import GraphConv
 import os
+import random
 import json
 import sys
+import itertools
 import pandas as pd
 import numpy as np
 
@@ -154,46 +156,86 @@ def gcn_model(size):
 if __name__ == "__main__":
 
     if len(sys.argv) < 2:
-        print(json.dumps({"modelNum": 3}))
+        print(json.dumps({"modelNum": 4}))
     else:
         vector_paths = word_vector_paths(sys.argv[1])
-        vector_size = len(vector_paths)
+        random.shuffle(vector_paths)
 
         deepwalk_files = get_graph_files(sys.argv[1], "DeepWalk")
+        random.shuffle(deepwalk_files)
         paragraph_files = get_graph_files(sys.argv[1], "ParagraphVec")
+        random.shuffle(paragraph_files)
         # print(vector_size, len(deepwalk_files))
 
         model_path = sys.argv[2]
         epoch_num = int(sys.argv[3])
         feature_size = int(sys.argv[4])
 
+        if len(sys.argv) > 5:
+            vector_paths_test = vector_paths[:int(len(vector_paths) * 0.2)]
+            vector_paths = vector_paths[int(len(vector_paths) * 0.2):]
+            deepwalk_files_test = deepwalk_files[:int(len(deepwalk_files) * 0.2)]
+            deepwalk_files = deepwalk_files[int(len(deepwalk_files) * 0.2):]
+            paragraph_files_test = paragraph_files[:int(len(paragraph_files) * 0.2)]
+            paragraph_files = paragraph_files[int(len(paragraph_files) * 0.2):]
+        else:
+            vector_paths_test = vector_paths
+            deepwalk_files_test = deepwalk_files
+            paragraph_files_test = paragraph_files
+
         model_list = [{
             "name": "CNN",
             "model": cnn_model(feature_size),
             "generator": data_generate(vector_paths),
-            "steps": int(vector_size / batch_size)
+            "steps": int(len(vector_paths) / batch_size),
+            "test_generator": data_generate(vector_paths_test),
+            "test_steps": int(len(vector_paths_test) / batch_size),
         },{
             "name": "LSTM",
             "model": LSTM_model(feature_size),
             "generator": data_generate(vector_paths),
-            "steps": int(vector_size / batch_size)
+            "steps": int(len(vector_paths) / batch_size),
+            "test_generator": data_generate(vector_paths_test),
+            "test_steps": int(len(vector_paths_test) / batch_size),
         },{
             "name": "DeepWalk_GCN",
             "model": gcn_model(feature_size),
             "generator": graph_generate(sys.argv[1], "DeepWalk", deepwalk_files),
-            "steps": int(len(deepwalk_files) / batch_size)
+            "steps": int(len(deepwalk_files) / batch_size),
+            "test_generator": graph_generate(sys.argv[1], "DeepWalk", deepwalk_files_test),
+            "test_steps": int(len(deepwalk_files_test) / batch_size),
         },{
             "name": "Paragraph2Vec_GCN",
             "model": gcn_model(feature_size),
             "generator": graph_generate(sys.argv[1], "ParagraphVec", paragraph_files),
-            "steps": int(len(paragraph_files) / batch_size)
+            "steps": int(len(paragraph_files) / batch_size),
+            "test_generator": graph_generate(sys.argv[1], "ParagraphVec", paragraph_files_test),
+            "test_steps": int(len(paragraph_files_test) / batch_size),
         }]
 
         result = []
         for item in model_list:
             model = item["model"]
             #  callbacks=[LossHistory()]
-            history = model.fit_generator(item["generator"], steps_per_epoch=item["steps"], epochs=epoch_num, verbose=0).history
+            if len(sys.argv) > 5:
+                g1, g2, g3 = itertools.tee(item["test_generator"], 3)
+                history = model.fit_generator(item["generator"], steps_per_epoch=item["steps"],
+                                              validation_data=g1, validation_steps=item["test_steps"],
+                                              epochs=epoch_num, verbose=0).history
+                predict_result = None
+                for i in range(item["test_steps"]):
+                    predict_y = model.predict_generator(g2, steps=1, workers=0, verbose=0)
+                    label_y = g3.__next__()[1]
+                    if predict_result is None:
+                        predict_result = np.concatenate((predict_y, label_y), axis=1)
+                    else:
+                        predict_result = np.concatenate((predict_result, np.concatenate((predict_y, label_y), axis=1)))
+                # print(predict_result)
+                pd.DataFrame(predict_result)\
+                    .to_csv(os.path.join(model_path, item["name"] + ".csv"), header=False, index=False)
+            else:
+                history = model.fit_generator(item["generator"], steps_per_epoch=item["steps"],
+                                              epochs=epoch_num, verbose=0).history
             history["name"] = item["name"]
             model.save(os.path.join(model_path, item["name"] + ".h5"))
             result.append(str(history))
