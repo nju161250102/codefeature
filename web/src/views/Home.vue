@@ -57,13 +57,21 @@
                                               label="训练次数" dense outlined></v-text-field>
                             </v-col>
                             <v-col cols="12" md="3">
+                                <v-switch v-model="valid" label="使用验证集"></v-switch>
+                            </v-col>
+                            <v-col cols="12" md="3">
                                 <v-btn color="primary" :disabled="trainButton" dense @click="train">
                                     开始训练
                                 </v-btn>
                             </v-col>
                         </v-row>
                         <v-row v-for="index in modelNum" :key="index">
-                            <div :id="'chart' + index" style="width: 600px;height:400px;"></div>
+                            <v-col cols="12" md="6">
+                                <div :id="'chart' + index" style="width: 600px;height:400px;"></div>
+                            </v-col>
+                            <v-col cols="12" md="6" v-if="valid">
+                                <div :id="'val_chart' + index" style="width: 600px;height:400px;"></div>
+                            </v-col>
                         </v-row>
                     </v-container>
                 </v-card>
@@ -114,6 +122,7 @@
                 featureSize: 16,
                 modelPath: '/home/qian/Desktop/CWE15/test/model',
                 epochNum: 10,
+                valid: false,
                 modelNum: 0,
                 numberRules: [
                     v => !!v || '请输入数字',
@@ -151,6 +160,14 @@
                     text: 'LSTM',
                     value: 'LSTM',
                     sortable: false
+                }, {
+                    text: 'Paragraph2Vec + GCN',
+                    value: 'Paragraph2Vec_GCN',
+                    sortable: false
+                }, {
+                    text: 'DeepWalk + GCN',
+                    value: 'DeepWalk_GCN',
+                    sortable: false
                 }],
                 predictResult: []
             }
@@ -177,7 +194,8 @@
                             outputPath: this.outputPath,
                             modelPath: this.modelPath,
                             epochNum: this.epochNum,
-                            featureSize: this.featureSize
+                            featureSize: this.featureSize,
+                            valid: this.valid
                         }).then((response) => {
                             let res = response.data
                             for (let i = 0; i < res.length; i++) {
@@ -199,11 +217,17 @@
                                 option.series.push(this.toSeries(result["loss"]))
                                 option.series.push(this.toSeries(result["accuracy"]))
                                 echarts.init(document.getElementById('chart' + (i+1))).setOption(option)
+                                option.series = []
+                                if (this.valid) {
+                                    option.series.push(this.toSeries(result["val_loss"]))
+                                    option.series.push(this.toSeries(result["val_accuracy"]))
+                                    echarts.init(document.getElementById('val_chart' + (i+1))).setOption(option)
+                                }
                             }
                         })
-                    })
-                    .finally(() => {
-                        this.trainButton = false
+                        .finally(() => {
+                            this.trainButton = false
+                        })
                     })
             },
             predict () {

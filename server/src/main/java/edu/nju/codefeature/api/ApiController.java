@@ -52,7 +52,8 @@ public class ApiController {
     @PostMapping("/train")
     public String train(@RequestBody TrainRequest request) {
         String[] params = {pythonPath, trainPath, request.getOutputPath(), request.getModelPath()
-                , String.valueOf(request.getEpochNum()), String.valueOf(request.getFeatureSize())};
+                , String.valueOf(request.getEpochNum()), String.valueOf(request.getFeatureSize())
+                , request.isValid() ? "1" : ""};
 
         return PythonTools.execute(params);
     }
@@ -68,10 +69,10 @@ public class ApiController {
         String fileSeparator = File.separator;
         String modelPath = request.getModelPath();
 
-        FileTools.checkOutputDir(modelPath);
+        FileTools.checkOutputDir(modelPath + fileSeparator + "False");
         List<String> javaFilePaths = FileTools.searchJavaFile(request.getJavaFilePath());
         for (String fileName: javaFilePaths) {
-            FileTools.saveFeature(new File(fileName), modelPath);
+            FileTools.saveFeature(new File(fileName), modelPath + fileSeparator + "False");
         }
 
         String[] params = {pythonPath, predictPath, modelPath};

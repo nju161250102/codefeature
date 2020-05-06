@@ -19,7 +19,7 @@ testConfig:
   dataPath: /home/qian/Desktop/CWE15/test
   outputPath: /home/qian/Desktop/CWE15/test/output
   modelPath: /home/qian/Desktop/CWE15/test/model
-#  modelPath: /root/version2/output/model
+#  modelPath: /root/version2/model
 #  dataPath: /root/version1/
 #  outputPath: /root/version2/output/
   featureSize: 16

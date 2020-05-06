@@ -11,5 +11,6 @@ class TrainRequest {
     private String modelPath;
     private int epochNum;
     private int featureSize;
+    private boolean valid;
 
 }

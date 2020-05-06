@@ -27,10 +27,8 @@ public class GraphFeature {
             Graph<String, String> graph = new Graph<>(vertexList.size(), vertexFactory);
 
             List<List<Integer>> edges = basicBlockGraph.getEdges();
-            for (int i = 0; i < edges.size(); i++) {
-                for (Integer n : edges.get(i)) {
-                    graph.addEdge(i, n, "", true);
-                }
+            for (List<Integer> edge: edges) {
+                graph.addEdge(edge.get(0), edge.get(1), "", true);
             }
 
             DeepWalk<String, String> deepWalk = new DeepWalk.Builder<String, String>()
@@ -45,6 +43,7 @@ public class GraphFeature {
                 result.add(Arrays.stream(vector.toDoubleVector()).boxed().collect(Collectors.toList()));
             }
         } catch (Exception e) {
+            e.printStackTrace();
             return new ArrayList<>();
         }
         return result;
