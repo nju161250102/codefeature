@@ -9,7 +9,7 @@ Vue.config.productionTip = false
 Vue.use(Vuetify)
 Vue.prototype.$http = Axios;
 
-Axios.defaults.baseURL = 'http://localhost:8080/api';
+Axios.defaults.baseURL = 'http://127.0.0.1:8080/api';
 Axios.defaults.headers.post['Content-Type'] = 'application/json';
 
 new Vue({
