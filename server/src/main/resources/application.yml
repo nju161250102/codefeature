@@ -9,11 +9,13 @@ logging:
         codefeature: info
         codefeature.tools: info
 
-pythonConfig:
-  path: /usr/bin/python3.6
-#  path: /usr/bin/python3
-  train: ./python/Train.py
-  predict: ./python/Predict.py
+pythonPath: /usr/bin/python3.6
+#  pythonPath: /usr/bin/python3
+
+fileConfig:
+  trainDataPath: /home/qian/Desktop/CWE15/test/data
+  modelPath: /home/qian/Desktop/CWE15/test/model
+  tempPath: /home/qian/Desktop/CWE15/test/temp
 
 testConfig:
   dataPath: /home/qian/Desktop/CWE15/test

@@ -48,7 +48,7 @@ export default {
             ],
         }
     },
-    method: {
+    methods: {
         finish () {
             let models = []
             if (this.cnn) models.push('cnn')
@@ -61,7 +61,7 @@ export default {
                 featureSize: this.featureSize,
                 epochNum: this.epochNum
             }).then(() => {
-                window.location.href = "/train"
+               this.$router.push({path: '/train'})
             })
         }
     }

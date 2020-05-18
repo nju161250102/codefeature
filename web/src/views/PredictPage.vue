@@ -21,22 +21,6 @@ export default {
                 text: '文件名',
                 value: 'name',
                 sortable: true
-            }, {
-                text: 'CNN',
-                value: 'CNN',
-                sortable: false
-            }, {
-                text: 'LSTM',
-                value: 'LSTM',
-                sortable: false
-            }, {
-                text: 'Paragraph2Vec + GCN',
-                value: 'Paragraph2Vec_GCN',
-                sortable: false
-            }, {
-                text: 'DeepWalk + GCN',
-                value: 'DeepWalk_GCN',
-                sortable: false
             }],
             desserts: [],
             loadFlag: false,
@@ -49,9 +33,21 @@ export default {
             this.predictButton = true
             this.$http.post('/predict').then((response) => {
                 this.desserts = response.data
+            }).finally(() => {
                 this.loadFlag = false
             })
         }
+    },
+    created () {
+        this.$http.get('/modelName').then((response) => {
+            for (let i = 0; i < response.data.length; i ++) {
+                this.headers.push({
+                    text: response.data[i],
+                    value: response.data[i],
+                    sortable: false
+                })
+            }
+        })
     }
 }
 </script>
