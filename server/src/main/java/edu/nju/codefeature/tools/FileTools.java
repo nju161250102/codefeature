@@ -25,12 +25,12 @@ public class FileTools {
     public static void checkOutputDir(String outputDir) {
         File target = new File(outputDir);
         if (! target.exists()) {
-            target.mkdir();
+            target.mkdirs();
         }
         for (String type: new String[]{"Text", "WordVector", "Edge", "DeepWalk", "ParagraphVec"}) {
             target = new File(outputDir + File.separator + type);
             if (! target.exists()) {
-                target.mkdir();
+                target.mkdirs();
             }
         }
     }
@@ -48,7 +48,7 @@ public class FileTools {
                     queue.push(file);
                 } else {
                     if (file.getName().matches("\\w*.java"))
-                    result.add(file.getAbsolutePath());
+                        result.add(file.getAbsolutePath());
                 }
             }
         }
@@ -58,6 +58,7 @@ public class FileTools {
     public static ExtractResult saveFeature(File javaFile, String outputDir, int featureSize) {
         ExtractResult extractResult = new ExtractResult();
         String javaFileName = javaFile.getName().split("\\.")[0];
+        String parentDir = javaFile.getParentFile().getName();
         extractResult.setName(javaFileName);
 
         logger.info("File: " + javaFileName);
@@ -69,7 +70,7 @@ public class FileTools {
                 CommentTools.removeComment(m);
                 SymbolTools.nameSubstitute(m);
                 try {
-                    String outputName = javaFileName + "_" + m.getNameAsString() + ".csv";
+                    String outputName = javaFileName + "#" + parentDir + "#" + m.getNameAsString() + ".csv";
                     List<String> astWords = ASTFeature.extract(m);
                     extractResult.setSequence(astWords.size());
                     FileTools.saveASTWords(astWords, outputDir, outputName);
@@ -165,4 +166,5 @@ public class FileTools {
         }
         bw.newLine();
     }
+
 }

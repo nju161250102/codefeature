@@ -51,8 +51,8 @@ class ApiControllerTest {
 
     @Test
     void train() throws Exception {
-        String request = String.format("{\"modelPath\":\"%s\",\"featureSize\":%d,\"outputPath\":\"%s\",\"epochNum\":%d}"
-                , modelPath, featureSize, outputPath, epochNum);
+        String request = String.format("{\"name\":\"%s\",\"featureSize\":%d,\"state\":\"%s\",\"epochNum\":%d}"
+                , "cnn", featureSize, "未训练", epochNum);
         mvc.perform(post("/api/train")
                 .content(request)
                 .contentType(MediaType.APPLICATION_JSON))

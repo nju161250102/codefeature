@@ -4,6 +4,7 @@
             <v-col cols="12" md="12">
                 <v-data-table :headers="headers" :items="desserts" :items-per-page="10" :loading="loadFlag" loading-text="正在处理中……">
                     <template v-slot:no-data>
+                        <v-checkbox v-for="item in modelName" :key="item" v-model="modelChoose" :label="item" :value="item"></v-checkbox>
                         <v-btn color="primary" :disabled="predictButton" outlined @click="predict">开始预测</v-btn>
                     </template>
                 </v-data-table>
@@ -24,14 +25,25 @@ export default {
             }],
             desserts: [],
             loadFlag: false,
-            predictButton: false
+            predictButton: false,
+            modelName: [],
+            modelChoose: [],
         }
     },
     methods: {
         predict () {
             this.loadFlag = true
             this.predictButton = true
-            this.$http.post('/predict').then((response) => {
+            for (let i = 0; i < this.modelChoose.length; i ++) {
+                this.headers.push({
+                    text: this.modelChoose[i],
+                    value: this.modelChoose[i],
+                    sortable: false
+                })
+            }
+            this.$http.post('/predict', {
+                models: this.modelChoose
+            }).then((response) => {
                 this.desserts = response.data
             }).finally(() => {
                 this.loadFlag = false
@@ -40,13 +52,7 @@ export default {
     },
     created () {
         this.$http.get('/modelName').then((response) => {
-            for (let i = 0; i < response.data.length; i ++) {
-                this.headers.push({
-                    text: response.data[i],
-                    value: response.data[i],
-                    sortable: false
-                })
-            }
+            this.modelName = response.data
         })
     }
 }

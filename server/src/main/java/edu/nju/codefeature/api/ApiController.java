@@ -1,5 +1,7 @@
 package edu.nju.codefeature.api;
 
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
 import edu.nju.codefeature.tools.FileTools;
 import edu.nju.codefeature.tools.PythonTools;
 import org.slf4j.Logger;
@@ -12,6 +14,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @RestController
 @RequestMapping("/api")
@@ -33,11 +36,8 @@ public class ApiController {
     private String predictResult = "";
 
     @PostMapping("/addModel")
-    public void addModel(@RequestBody AddModelRequest request) {
-        for (String name: request.getModels()) {
-            this.modelList.add(new ModelObject(name, request.getFeatureSize(),
-                    request.getEpochNum(), ModelObject.NOT_TRAINING));
-        }
+    public void addModel(@RequestBody ModelObject model) {
+        this.modelList.add(model);
     }
 
     @GetMapping("/trainList")
@@ -60,7 +60,7 @@ public class ApiController {
                     }
                     if (flag)
                         result.add(new ModelObject(info[0], Integer.parseInt(info[1]),
-                            Integer.parseInt(info[2]), ModelObject.TRAINED));
+                                Integer.parseInt(info[2]), ModelObject.TRAINED));
                 }
             }
         }
@@ -81,15 +81,16 @@ public class ApiController {
     }
 
     @PostMapping("/extract")
-    public List<ExtractResult> extract(@RequestBody ExtractRequest request) {
+    public void extract(@RequestBody ExtractRequest request) {
         String fileSeparator = File.separator;
         String parentPath = request.getDataPath();
         String targetPath = request.getOutputPath();
 
-        List<ExtractResult> result = new ArrayList<>();
         for (String type : new String[]{"Positive", "False"}) {
             String outputDir = targetPath + fileSeparator + type;
-            FileTools.checkOutputDir(outputDir);
+            FileTools.checkOutputDir(outputDir + fileSeparator + "8");
+            FileTools.checkOutputDir(outputDir + fileSeparator + "16");
+            FileTools.checkOutputDir(outputDir + fileSeparator + "32");
             List<String> javaFilePaths = FileTools.searchJavaFile(parentPath + fileSeparator + type);
             logger.info("The count of java files: " + javaFilePaths.size());
             for (int i = 0; i < javaFilePaths.size(); i ++) {
@@ -97,13 +98,9 @@ public class ApiController {
                 logger.info("The index of File: " + i);
                 FileTools.saveFeature(javaFile, outputDir + fileSeparator + "8", 8);
                 FileTools.saveFeature(javaFile, outputDir + fileSeparator + "16", 16);
-                ExtractResult extractResult = FileTools.saveFeature(javaFile, outputDir + fileSeparator + "32", 32);
-                extractResult.setFlag("Positive".equals(type) ? "正报" : "误报");
-                result.add(extractResult);
-                FileTools.saveExtractResult(extractResult, outputDir);
+                FileTools.saveFeature(javaFile, outputDir + fileSeparator + "32", 32);
             }
         }
-        return result;
     }
 
     @PostMapping("/train")
@@ -138,31 +135,56 @@ public class ApiController {
     }
 
     @PostMapping("/predict")
-    public String predict(HttpSession session) {
+    public String predict(@RequestBody JSONObject request, HttpSession session) {
         String newPath = (String) session.getAttribute("predictPath");
         if (predictPath.equals(newPath)) return predictResult;
         else predictPath = newPath;
-
-        String fileSeparator = File.separator;
-        FileTools.checkOutputDir(tempPath + fileSeparator + "8" + fileSeparator + "False");
-        FileTools.checkOutputDir(tempPath + fileSeparator + "16" + fileSeparator + "False");
-        FileTools.checkOutputDir(tempPath + fileSeparator + "32" + fileSeparator + "False");
-        List<String> javaFilePaths = FileTools.searchJavaFile((String) session.getAttribute("predictPath"));
-        for (String fileName: javaFilePaths) {
-            FileTools.saveFeature(new File(fileName), tempPath + fileSeparator + "8" + fileSeparator + "False", 8);
-            FileTools.saveFeature(new File(fileName), tempPath + fileSeparator + "16" + fileSeparator + "False", 16);
-            FileTools.saveFeature(new File(fileName), tempPath + fileSeparator + "32" + fileSeparator + "False", 32);
+//
+        String separator = File.separator;
+        File predictDir = new File(predictPath);
+        File tempDir = new File(tempPath + separator + predictDir.getName());
+        if (! tempDir.exists()) {
+            tempDir.mkdir();
+            FileTools.checkOutputDir(tempDir.getAbsolutePath() + separator + "8" + separator + "False");
+            FileTools.checkOutputDir(tempDir.getAbsolutePath() + separator + "16" + separator + "False");
+            FileTools.checkOutputDir(tempDir.getAbsolutePath() + separator + "32" + separator + "False");
+            List<String> javaFilePaths = FileTools.searchJavaFile(predictPath);
+            for (String fileName: javaFilePaths) {
+                FileTools.saveFeature(new File(fileName), tempDir.getAbsolutePath() + separator + "8" + separator + "False", 8);
+                FileTools.saveFeature(new File(fileName), tempDir.getAbsolutePath() + separator + "16" + separator + "False", 16);
+                FileTools.saveFeature(new File(fileName), tempDir.getAbsolutePath() + separator + "32" + separator + "False", 32);
+            }
         }
 
-        String[] params = {pythonPath, "./python/Predict.py", modelPath, tempPath};
-        String line = PythonTools.execute(params);
-
-        for (String type: new String[]{"Text", "WordVector", "Edge", "DeepWalk", "ParagraphVec"}) {
-            new File(tempPath + fileSeparator + "8" + fileSeparator + "False" + fileSeparator + type).delete();
-            new File(tempPath + fileSeparator + "16" + fileSeparator + "False" + fileSeparator + type).delete();
-            new File(tempPath + fileSeparator + "32" + fileSeparator + "False" + fileSeparator + type).delete();
+        String[] params = {pythonPath, "./python/Predict.py", modelPath, tempDir.getAbsolutePath()};
+        List<String> paramList = Stream.of(params).collect(Collectors.toList());
+        JSONArray models = request.getJSONArray("models");
+        for (int i = 0; i < models.size(); i ++) {
+            paramList.add(models.getString(i));
         }
+        String line = PythonTools.execute(paramList.toArray(new String[paramList.size()]));
+        System.out.println(line);
 
+//        JSONArray jsonArray = JSON.parseArray(line);
+//        for (int i = 0; i < jsonArray.size(); i ++) {
+//            JSONObject o = jsonArray.getJSONObject(i);
+//            String[] info = o.getString("name").split("#");
+//            double max = 0.0;
+//            for (String key : o.keySet()) {
+//                if (! "name".equals(key)) {
+//                    max += o.getDouble(key);
+//                }
+//            }
+//            String name = info[0];
+//            String lineNumber = info[1];
+//            vulnerService.probUpdate(searchBugIdService.getBugId(name, Integer.parseInt(lineNumber)), max / (o.keySet().size() - 1));
+//        }
+
+//        for (String type: new String[]{"Text", "WordVector", "Edge", "DeepWalk", "ParagraphVec"}) {
+//            new File(tempPath + separator + "8" + separator + "False" + separator + type).delete();
+//            new File(tempPath + separator + "16" + separator + "False" + separator + type).delete();
+//            new File(tempPath + separator + "32" + separator + "False" + separator + type).delete();
+//        }
         predictResult = line;
         return line;
     }

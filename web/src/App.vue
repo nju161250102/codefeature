@@ -1,7 +1,7 @@
 <template>
   <v-app>
     <v-app-bar app>
-      代码漏洞误报检测系统
+      <span class="headline">代码漏洞误报检测系统</span>
       <template v-slot:extension>
         <v-tabs align-with-title>
           <v-tab to="/">模型配置</v-tab>

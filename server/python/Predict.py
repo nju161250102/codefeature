@@ -7,8 +7,6 @@ import sys
 import pandas as pd
 import numpy as np
 
-seq_len = 256
-
 
 def model_predict(model, data_generator, all_steps, label_generator=None):
     result = None
@@ -30,10 +28,13 @@ def model_predict(model, data_generator, all_steps, label_generator=None):
 
 if __name__ == "__main__":
     model_path = sys.argv[1]
+    model_choose = set(sys.argv[3:])
     result_dict = {}
 
     for f in os.listdir(model_path):
         if len(f.split(".")) != 2 or f.split(".")[1] != "h5":
+            continue
+        if f not in model_choose:
             continue
 
         model_name = f.split(".")[0].split("_")[0]
@@ -63,13 +64,6 @@ if __name__ == "__main__":
                     result_dict[file_name] = {}
                     result_dict[file_name]["name"] = file_name
                 result_dict[file_name][f] = row[0]
-            # data, file_names = read_wordVector(model_path, "WordVector")
-            #
-            # for index, file_name in enumerate(file_names):
-            #     if file_name not in result_dict:
-            #         result_dict[file_name] = {}
-            #         result_dict[file_name]["name"] = file_name.split(".")[0]
-            #     result_dict[file_name][model_name] = predict_y[index][0]
 
     result = str(list(result_dict.values()))
     print(result.replace("'", "\""))
