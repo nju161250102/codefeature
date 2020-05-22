@@ -1,8 +1,9 @@
 from keras.models import Sequential, Model
 from keras.layers import Conv1D, MaxPool1D, GlobalAveragePooling1D, Dropout
 from keras.layers import Input, Dense, Flatten, LSTM
-from keras.callbacks import Callback
+from keras.callbacks import History
 from keras_gcn import GraphConv
+from sklearn.metrics import f1_score, recall_score, precision_score
 from Generator import *
 from Config import get_config
 import os
@@ -55,6 +56,43 @@ def gcn_model(size):
                   optimizer='adam',
                   metrics=['accuracy'])
     return model
+
+
+class Metrics(History):
+
+    def __init__(self, generator, steps):
+        History.__init__(self)
+        self.generator = generator
+        self.steps = steps
+        self.val_label = None
+        g1, g2= itertools.tee(self.generator, 2)
+        self.generator = g1
+        for i in range(self.steps):
+            label_y = g2.__next__()[1]
+            if self.val_label is None:
+                self.val_label = np.array(label_y)
+            else:
+                self.val_label = np.concatenate((self.val_label, np.array(label_y)))
+
+    def on_epoch_end(self, epoch, logs={}):
+        g1, g2 = itertools.tee(self.generator, 2)
+        self.generator = g1
+        val_predict = None
+        for i in range(self.steps):
+            predict_y = model.predict_generator(g2, steps=1, workers=0, verbose=0)
+            if val_predict is None:
+                val_predict = np.array(predict_y)
+            else:
+                val_predict = np.concatenate((val_predict, np.array(predict_y)))
+        val_predict = np.where(val_predict > 0.5, 1, 0)
+        _val_f1 = f1_score(self.val_label[:, 0], val_predict[:, 0])
+        _val_recall = recall_score(self.val_label[:, 0], val_predict[:, 0])
+        _val_precision = precision_score(self.val_label[:, 0], val_predict[:, 0])
+
+        # print(_val_f1, _val_precision, _val_recall)
+        logs['val_f1'] = _val_f1
+        logs['val_recall'] = _val_recall
+        logs['val_precision'] = _val_precision
 
 
 if __name__ == "__main__":
@@ -123,29 +161,11 @@ if __name__ == "__main__":
                 continue
             model = item["model"]
 
-            if len(sys.argv) > 5:
-                g1, g2, g3 = itertools.tee(item["test_generator"], 3)
-                history = model.fit_generator(item["generator"], steps_per_epoch=item["steps"],
-                                              validation_data=g1, validation_steps=item["test_steps"],
-                                              epochs=epoch_num, verbose=0, workers=0).history
-                predict_result = None
-                for i in range(item["test_steps"]):
-                    predict_y = model.predict_generator(g2, steps=1, workers=0, verbose=0)
-                    label_y = g3.__next__()[1]
-                    if predict_result is None:
-                        predict_result = np.concatenate((predict_y, label_y), axis=1)
-                    else:
-                        predict_result = np.concatenate((predict_result, np.concatenate((predict_y, label_y), axis=1)))
-                # print(predict_result)
-                pd.DataFrame(predict_result)\
-                    .to_csv(os.path.join(model_path, item["name"] + ".csv"), header=False, index=False)
-            # else:
-            #    history = model.fit_generator(item["generator"], steps_per_epoch=item["steps"],
-            #                                  epochs=epoch_num, verbose=0).history
+            g1, g2, g3 = itertools.tee(item["test_generator"], 3)
+            history = model.fit_generator(item["generator"], steps_per_epoch=item["steps"],
+                                          validation_data=g1, validation_steps=item["test_steps"],
+                                          epochs=epoch_num, verbose=0, workers=0, callbacks=[Metrics(g2, item["test_steps"])]).history
             history["name"] = item["name"]
-            history["value1"] = history["val_accuracy"][-1]
-            history["value2"] = history["val_accuracy"][-1]
             model.save(os.path.join(model_path, "_".join([item["name"], str(feature_size), str(epoch_num)]) + ".h5"))
             with open(os.path.join(model_path, "_".join([item["name"], str(feature_size), str(epoch_num)])), 'w') as f:
                 f.write(str(history).replace("'", "\""))
-                f.close
