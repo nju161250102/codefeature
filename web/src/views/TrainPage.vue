@@ -1,6 +1,35 @@
 <template>
 <v-container>
-    <v-row>
+    <v-row v-if="dialog">
+        <v-col cols="12" md="12">
+            <v-card>
+                <v-container>
+                    <v-row>
+                        <v-col cols="12" md="6">
+                            <div id="chart" style="width: 600px;height:400px;"></div>
+                        </v-col>
+                        <v-col cols="12" md="6">
+                            <div id="val_chart" style="width: 600px;height:400px;"></div>
+                        </v-col>
+                    </v-row>
+                    <v-row>
+                        <v-col cols="12" md="6">
+                            <div id="val_f1_chart" style="width: 600px;height:400px;"></div>
+                        </v-col>
+                        <v-col cols="12" md="6">
+                            <div id="val_precision_chart" style="width: 600px;height:400px;"></div>
+                        </v-col>
+                    </v-row>
+                </v-container>
+                <v-card-actions>
+                    <v-btn color="primary" text @click="dialog = false">
+                        关闭
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-col>
+    </v-row>
+    <v-row v-else>
         <v-col cols="12" md="12">
             <v-data-table :headers="headers" :items="desserts" :items-per-page="10">
                 <template v-slot:item.state="{ item }">
@@ -13,35 +42,6 @@
             </v-data-table>
         </v-col>
     </v-row>
-    <v-bottom-sheet v-model="dialog">
-        <v-card color="grey lighten-4">
-            <v-container>
-                <v-row>
-                    <v-col cols="12" md="6">
-                        <div id="chart" style="width: 600px;height:400px;"></div>
-                    </v-col>
-                    <v-col cols="12" md="6">
-                        <div id="val_chart" style="width: 600px;height:400px;"></div>
-                    </v-col>
-                </v-row>
-                <v-row>
-                    <v-col cols="12" md="2">
-                        <span class="title">验证集精确度：{{val_value1}}</span>
-                    </v-col>
-                </v-row>
-                <v-row>
-                    <v-col cols="12" md="2">
-                        <span class="title">验证集F1值：{{val_value2}}</span>
-                    </v-col>
-                </v-row>
-            </v-container>
-            <v-card-actions>
-                <v-btn color="primary" text @click="dialog = false">
-                    关闭
-                </v-btn>
-            </v-card-actions>
-        </v-card>
-    </v-bottom-sheet>
 </v-container>
 </template>
 
@@ -74,7 +74,8 @@ export default {
             desserts: [],
             dialog: false,
             val_value1: 0,
-            val_value2: 0
+            val_value2: 0,
+
         }
     }, methods: {
         loadTable () {
@@ -123,13 +124,25 @@ export default {
                 option.series.push(this.toSeries(result["loss"], 'loss'))
                 option.series.push(this.toSeries(result["accuracy"], 'accuracy'))
                 echarts.init(document.getElementById('chart')).setOption(option)
+
                 option.series = []
                 option.title.text = item["name"] + "在验证集上的表现"
                 option.series.push(this.toSeries(result["val_loss"], 'loss'))
                 option.series.push(this.toSeries(result["val_accuracy"], 'accuracy'))
                 echarts.init(document.getElementById('val_chart')).setOption(option)
-                this.val_value1 = result["value1"]
-                this.val_value2 = result["value2"]
+
+                option.series = []
+                option.title.text = item["name"] + "在验证集上的F1值"
+                option.series.push(this.toSeries(result["val_f1"], 'F1'))
+                option.legend.data = ['F1']
+                echarts.init(document.getElementById('val_f1_chart')).setOption(option)
+
+                option.series = []
+                option.title.text = item["name"] + "在验证集上的精确度"
+                option.series.push(this.toSeries(result["val_precision"], 'precision'))
+                option.legend.data = ['precision']
+                echarts.init(document.getElementById('val_precision_chart')).setOption(option)
+
             })
         },
         toSeries(arr, name) {

@@ -1,12 +1,14 @@
 <template>
     <v-container>
+        <v-row v-for="item in modelName" :key="item">
+            <v-checkbox  v-model="modelChoose" :label="item" :value="item"></v-checkbox>
+        </v-row>
         <v-row>
-            <v-col cols="12" md="12">
+            <v-btn color="primary" :disabled="predictButton" outlined @click="predict">开始预测</v-btn>
+        </v-row>
+        <v-row>
+            <v-col cols="12" md="12" v-if="desserts.length > 0">
                 <v-data-table :headers="headers" :items="desserts" :items-per-page="10" :loading="loadFlag" loading-text="正在处理中……">
-                    <template v-slot:no-data>
-                        <v-checkbox v-for="item in modelName" :key="item" v-model="modelChoose" :label="item" :value="item"></v-checkbox>
-                        <v-btn color="primary" :disabled="predictButton" outlined @click="predict">开始预测</v-btn>
-                    </template>
                 </v-data-table>
             </v-col>
         </v-row>
@@ -46,6 +48,7 @@ export default {
             }).then((response) => {
                 this.desserts = response.data
             }).finally(() => {
+                this.predictButton = false
                 this.loadFlag = false
             })
         }
