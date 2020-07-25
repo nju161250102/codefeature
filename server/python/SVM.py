@@ -1,5 +1,6 @@
 import numpy as np
 from sklearn.svm import SVC
+from sklearn.naive_bayes import GaussianNB
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import f1_score, accuracy_score, recall_score, precision_score
 
@@ -20,6 +21,16 @@ if __name__ == "__main__":
     svc.fit(X_train, y_train)
     y_predict = svc.predict(X_test)
 
+    print(accuracy_score(y_test, y_predict))
+    print(precision_score(y_test, y_predict))
+    print(recall_score(y_test, y_predict))
+    print(f1_score(y_test, y_predict))
+
+    print("----------------------------------")
+
+    clf = GaussianNB()
+    clf.fit(X_train, y_train)
+    y_predict = clf.predict(X_test)
     print(accuracy_score(y_test, y_predict))
     print(precision_score(y_test, y_predict))
     print(recall_score(y_test, y_predict))
