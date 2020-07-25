@@ -138,7 +138,7 @@ export default {
                 echarts.init(document.getElementById('val_f1_chart')).setOption(option)
 
                 option.series = []
-                option.title.text = item["name"] + "在验证集上的精确度"
+                option.title.text = item["name"] + "在验证集上的precision"
                 option.series.push(this.toSeries(result["val_precision"], 'precision'))
                 option.legend.data = ['precision']
                 echarts.init(document.getElementById('val_precision_chart')).setOption(option)

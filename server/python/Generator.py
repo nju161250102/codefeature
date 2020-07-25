@@ -27,6 +27,28 @@ def get_feature_files(output_path, node_type="WordVector"):
     return result
 
 
+def read_feature_file(file_path, feature_type, len_limit):
+    df = pd.read_csv(file_path, header=None)
+    feature_len = df.shape[0]
+    x_batch = []
+
+    if feature_type == "Edge":
+        for i in range(len_limit):
+            x_batch.append([0 for j in range(len_limit)])
+        for index, row in df.iterrows():
+            if int(row[0]) < len_limit and int(row[1]) < len_limit:
+                x_batch[int(row[0])][int(row[1])] = 1
+    else:
+        for index, row in df.iterrows():
+            if index < len_limit:
+                x_batch.append(list(row))
+        if feature_len < len_limit:
+            for i in range(feature_len, len_limit):
+                x_batch.append([0 for j in range(df.shape[1])])
+
+    return x_batch
+
+
 def feature_generate(output_path, feature_type, files, len_limit):
     while True:
         x = []
@@ -36,25 +58,7 @@ def feature_generate(output_path, feature_type, files, len_limit):
             if os.path.getsize(file_path) == 0:
                 continue
 
-            df = pd.read_csv(file_path, header=None)
-            feature_len = df.shape[0]
-            x_batch = []
-
-            if feature_type == "Edge":
-                for i in range(len_limit):
-                    x_batch.append([0 for j in range(len_limit)])
-                for index, row in df.iterrows():
-                    if int(row[0]) < len_limit and int(row[1]) < len_limit:
-                        x_batch[int(row[0])][int(row[1])] = 1
-            else:
-                for index, row in df.iterrows():
-                    if index < len_limit:
-                        x_batch.append(list(row))
-                if feature_len < len_limit:
-                    for i in range(feature_len, len_limit):
-                        x_batch.append([0 for j in range(df.shape[1])])
-
-            x.append(x_batch)
+            x.append(read_feature_file(file_path, feature_type, len_limit))
             y.append([1, 0] if label == "False" else [0, 1])
 
             if len(x) == get_config("batch_size"):

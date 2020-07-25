@@ -110,7 +110,7 @@ export default {
                 case 'lstm':
                     return '长短期记忆模型是一类循环神经网络模型，用于处理例如文本和语音这类序列数据'
                 case 'gcn':
-                    return '图卷积神经网络则是将卷积操作应用在图结构上，优化卷积核的参数'
+                    return '图卷积神经网络是将卷积操作应用在图结构上，不断优化卷积核的参数'
                 default :
                     return ''
             }
