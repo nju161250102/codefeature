@@ -27,7 +27,7 @@ public class FileTools {
         if (! target.exists()) {
             target.mkdirs();
         }
-        for (String type: new String[]{"Text", "WordVector", "Edge", "DeepWalk", "ParagraphVec"}) {
+        for (String type: new String[]{"Text", "TextVector", "WordVector", "Edge", "DeepWalk", "ParagraphVec"}) {
             target = new File(outputDir + File.separator + type);
             if (! target.exists()) {
                 target.mkdirs();
@@ -71,6 +71,17 @@ public class FileTools {
                 SymbolTools.nameSubstitute(m);
                 try {
                     String outputName = javaFileName + "#" + parentDir + "#" + m.getNameAsString() + ".csv";
+
+                    String methodString = m.toString();
+                    for (String c: new String[]{"(", ")", "=", "+", "\""}) {
+                        methodString = methodString.replace(c, " "+c+" ");
+                    }
+                    for (String c: new String[]{";", "\n", "\r"}) {
+                        methodString = methodString.replace(c, " ");
+                    }
+                    List<String> strings = Arrays.stream(methodString.split(" ")).filter(s -> !"".equals(s)).collect(Collectors.toList());
+                    FileTools.saveTextVector(strings, outputDir, outputName, featureSize);
+
                     List<String> astWords = ASTFeature.extract(m);
                     extractResult.setSequence(astWords.size());
                     FileTools.saveASTWords(astWords, outputDir, outputName);
@@ -116,6 +127,15 @@ public class FileTools {
         String outputPath = String.join(File.separator, new String[]{outputDir, "Text", outputName});
         BufferedWriter writer = new BufferedWriter(new FileWriter(outputPath));
         FileTools.saveList(writer, astWords);
+        writer.close();
+    }
+
+    private static void saveTextVector(List<String> words, String outputDir, String outputName, int featureSize) throws IOException {
+        String outputPath = String.join(File.separator, new String[]{outputDir, "TextVector", outputName});
+        BufferedWriter writer = new BufferedWriter(new FileWriter(outputPath));
+        for (List<Double> line: Word2VecModel.transformWords(words, featureSize)) {
+            FileTools.saveList(writer, line);
+        }
         writer.close();
     }
 

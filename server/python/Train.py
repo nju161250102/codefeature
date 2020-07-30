@@ -161,11 +161,14 @@ if __name__ == "__main__":
                 continue
             model = item["model"]
 
-            g1, g2, g3 = itertools.tee(item["test_generator"], 3)
-            history = model.fit_generator(item["generator"], steps_per_epoch=item["steps"],
-                                          validation_data=g1, validation_steps=item["test_steps"],
-                                          epochs=epoch_num, verbose=0, workers=0, callbacks=[Metrics(g2, item["test_steps"])]).history
-            history["name"] = item["name"]
-            model.save(os.path.join(model_path, "_".join([item["name"], str(feature_size), str(epoch_num)]) + ".h5"))
-            with open(os.path.join(model_path, "_".join([item["name"], str(feature_size), str(epoch_num)])), 'w') as f:
-                f.write(str(history).replace("'", "\""))
+            model.fit_generator(item["generator"], steps_per_epoch=item["steps"], epochs=epoch_num, verbose=0, workers=0)
+
+
+            # g1, g2, g3 = itertools.tee(item["test_generator"], 3)
+            # history = model.fit_generator(item["generator"], steps_per_epoch=item["steps"],
+            #                               validation_data=g1, validation_steps=item["test_steps"],
+            #                               epochs=epoch_num, verbose=0, workers=0, callbacks=[Metrics(g2, item["test_steps"])]).history
+            # history["name"] = item["name"]
+            # model.save(os.path.join(model_path, "_".join([item["name"], str(feature_size), str(epoch_num)]) + ".h5"))
+            # with open(os.path.join(model_path, "_".join([item["name"], str(feature_size), str(epoch_num)])), 'w') as f:
+            #     f.write(str(history).replace("'", "\""))

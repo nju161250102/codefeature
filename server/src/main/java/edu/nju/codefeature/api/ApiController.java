@@ -43,7 +43,7 @@ public class ApiController {
     @GetMapping("/trainList")
     public List<ModelObject> getTrainList() {
         List<ModelObject> result = this.modelList.stream()
-                .filter(m -> ! ModelObject.TRAINED.equals(m.getState()))
+                .filter(m -> !ModelObject.TRAINED.equals(m.getState()))
                 .collect(Collectors.toList());
         File modelDir = new File(this.modelPath);
         if (modelDir.isDirectory()) {
@@ -70,7 +70,7 @@ public class ApiController {
 
     @PostMapping("/detail")
     public String getDetail(@RequestBody ModelObject model) {
-        String fileName = String.join("_", new String[]{model.getName(), ""+model.getFeatureSize(), ""+model.getEpochNum()});
+        String fileName = String.join("_", new String[]{model.getName(), "" + model.getFeatureSize(), "" + model.getEpochNum()});
         try {
             BufferedReader reader = new BufferedReader(new FileReader(this.modelPath + File.separator + fileName));
             return reader.readLine();
@@ -88,17 +88,17 @@ public class ApiController {
 
         for (String type : new String[]{"Positive", "False"}) {
             String outputDir = targetPath + fileSeparator + type;
-            FileTools.checkOutputDir(outputDir + fileSeparator + "8");
+            // FileTools.checkOutputDir(outputDir + fileSeparator + "8");
             FileTools.checkOutputDir(outputDir + fileSeparator + "16");
-            FileTools.checkOutputDir(outputDir + fileSeparator + "32");
+            // FileTools.checkOutputDir(outputDir + fileSeparator + "32");
             List<String> javaFilePaths = FileTools.searchJavaFile(parentPath + fileSeparator + type);
             logger.info("The count of java files: " + javaFilePaths.size());
-            for (int i = 0; i < javaFilePaths.size(); i ++) {
+            for (int i = 0; i < javaFilePaths.size(); i++) {
                 File javaFile = new File(javaFilePaths.get(i));
                 logger.info("The index of File: " + i);
-                FileTools.saveFeature(javaFile, outputDir + fileSeparator + "8", 8);
+                // FileTools.saveFeature(javaFile, outputDir + fileSeparator + "8", 8);
                 FileTools.saveFeature(javaFile, outputDir + fileSeparator + "16", 16);
-                FileTools.saveFeature(javaFile, outputDir + fileSeparator + "32", 32);
+                // FileTools.saveFeature(javaFile, outputDir + fileSeparator + "32", 32);
             }
         }
     }
@@ -127,7 +127,7 @@ public class ApiController {
         if (modelDir.isDirectory()) {
             for (File f : modelDir.listFiles()) {
                 if (f.getName().matches("\\w*.h5")) {
-                    names.add("\""+f.getName()+"\"");
+                    names.add("\"" + f.getName() + "\"");
                 }
             }
         }
@@ -143,13 +143,13 @@ public class ApiController {
         String separator = File.separator;
         File predictDir = new File(predictPath);
         File tempDir = new File(tempPath + separator + predictDir.getName());
-        if (! tempDir.exists()) {
+        if (!tempDir.exists()) {
             tempDir.mkdir();
             FileTools.checkOutputDir(tempDir.getAbsolutePath() + separator + "8" + separator + "False");
             FileTools.checkOutputDir(tempDir.getAbsolutePath() + separator + "16" + separator + "False");
             FileTools.checkOutputDir(tempDir.getAbsolutePath() + separator + "32" + separator + "False");
             List<String> javaFilePaths = FileTools.searchJavaFile(predictPath);
-            for (String fileName: javaFilePaths) {
+            for (String fileName : javaFilePaths) {
                 FileTools.saveFeature(new File(fileName), tempDir.getAbsolutePath() + separator + "8" + separator + "False", 8);
                 FileTools.saveFeature(new File(fileName), tempDir.getAbsolutePath() + separator + "16" + separator + "False", 16);
                 FileTools.saveFeature(new File(fileName), tempDir.getAbsolutePath() + separator + "32" + separator + "False", 32);
@@ -159,7 +159,7 @@ public class ApiController {
         String[] params = {pythonPath, "./python/Predict.py", modelPath, tempDir.getAbsolutePath()};
         List<String> paramList = Stream.of(params).collect(Collectors.toList());
         JSONArray models = request.getJSONArray("models");
-        for (int i = 0; i < models.size(); i ++) {
+        for (int i = 0; i < models.size(); i++) {
             paramList.add(models.getString(i));
         }
         String line = PythonTools.execute(paramList.toArray(new String[paramList.size()]));
@@ -188,5 +188,4 @@ public class ApiController {
         predictResult = line;
         return line;
     }
-
 }
