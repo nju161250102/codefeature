@@ -48,6 +48,7 @@ def vector_seq(file_list, y_list, data_dir, feature_type="WordVector", compress=
 def vector_graph(file_list, y_list, data_dir, feature_type):
     edge_data = []
     x_data = []
+    y_data = []
     for i in range(0, len(file_list)):
         file_path = os.path.join(data_dir, "False" if y_list[i] == 1 else "Positive", feature_type, file_list[i])
         if os.path.getsize(file_path) == 0:
@@ -56,7 +57,8 @@ def vector_graph(file_list, y_list, data_dir, feature_type):
         x_batch = read_feature_file(file_path, feature_type, get_config("node_len"))
         edge_data.append(edge_batch)
         x_data.append(x_batch)
-    return [x_data, edge_data]
+        y_data.append(y_list[i])
+    return [x_data, edge_data], y_data
 
 
 def transform_y(y_data):
@@ -108,14 +110,14 @@ if __name__ == "__main__":
     #
     #nn("lstm", lstm_model(16), X_train, X_test, y_train, y_test)
     #
-    file_train, file_test, y_train, y_test = data_split(sys.argv[1], "DeepWalk")
-    X_train = vector_graph(file_train, y_train, sys.argv[1], "DeepWalk")
-    X_test = vector_graph(file_test, y_test, sys.argv[1], "DeepWalk")
-    nn("deepwalk_gcn", gcn_model(16), X_train, X_test, y_train, y_test)
+    #file_train, file_test, y_train, y_test = data_split(sys.argv[1], "DeepWalk")
+    #X_train, y_train = vector_graph(file_train, y_train, sys.argv[1], "DeepWalk")
+    #X_test, y_test = vector_graph(file_test, y_test, sys.argv[1], "DeepWalk")
+    #nn("deepwalk_gcn", gcn_model(16), X_train, X_test, y_train, y_test)
     #
     file_train, file_test, y_train, y_test = data_split(sys.argv[1], "ParagraphVec")
-    X_train = vector_graph(file_train, y_train, sys.argv[1], "ParagraphVec")
-    X_test = vector_graph(file_test, y_test, sys.argv[1], "ParagraphVec")
-    nn("dpara2vec_gcn", gcn_model(16), X_train, X_test, y_train, y_test)
+    X_train, y_train = vector_graph(file_train, y_train, sys.argv[1], "ParagraphVec")
+    X_test, y_test = vector_graph(file_test, y_test, sys.argv[1], "ParagraphVec")
+    nn("para2vec_gcn", gcn_model(16), X_train, X_test, y_train, y_test)
 
 
