@@ -8,7 +8,6 @@ from keras_gcn import GraphConv
 
 from Generator import *
 from Train import *
-from Predict import get_predict_results
 from Config import get_config
 
 
@@ -60,7 +59,7 @@ def transform_predict_y(y_predict):
 
 
 def svm(X_train, X_test, y_train, y_test):
-    svc = SVC(kernel='rbf')
+    svc = SVC(kernel='rbf', verbose=True)
     svc.fit(X_train, y_train)
     evaluate(y_train, svc.predict(X_train), "SVM的训练集")
     evaluate(y_test, svc.predict(X_test), "SVM的测试集")
@@ -88,6 +87,7 @@ if __name__ == "__main__":
         y_data.append(1 if label == "False" else 0)
     file_train, file_test, y_train, y_test = train_test_split(file_data, y_data, test_size=0.3)
 
+    print(len(file_data))
     # svm and nb
     X_train = vector_seq(file_train, y_train, sys.argv[1], compress=True)
     X_test = vector_seq(file_test, y_test, sys.argv[1], compress=True)
