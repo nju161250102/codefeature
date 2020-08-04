@@ -55,7 +55,7 @@ def vector_combine(file_list, y_list, data_dir, compress=False):
         x_batch = []
         for s in ["TextVector", "WordVector", "ParagraphVec"]:
             file_path = os.path.join(data_dir, "False" if y_list[i] == 1 else "Positive", s, file_list[i])
-            if os.path.getsize(file_path) == 0:
+            if not os.path.isfile(file_path) or os.path.getsize(file_path) == 0:
                 continue
             x_batch.extend(read_feature_file(file_path, s, get_config("node_len") if s == "ParagraphVec" else get_config("seq_len")))
         if len(x_batch) < 544:
@@ -136,6 +136,7 @@ if __name__ == "__main__":
         if s == "Combine":
             s = "ParagraphVec"
             file_train, file_test, y_train, y_test = data_split(sys.argv[1], s)
+        '''
             X_train, y_train = vector_combine(file_train, y_train, sys.argv[1], compress=True)
             X_test, y_test = vector_combine(file_test, y_test, sys.argv[1], compress=True)
         else:
@@ -145,6 +146,7 @@ if __name__ == "__main__":
         svm(X_train, X_test, y_train, y_test)
         randomForest(X_train, X_test, y_train, y_test)
         gaussianNB(X_train, X_test, y_train, y_test)
+        '''
 
         X_train = vector_seq(file_train, y_train, sys.argv[1])
         X_test = vector_seq(file_test, y_test, sys.argv[1])
