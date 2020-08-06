@@ -36,6 +36,7 @@ def data_split(data_dir, feature_type="WordVector"):
 def vector_seq(file_list, y_list, data_dir, feature_type="WordVector", compress=False):
     x_data = []
     for i in range(0, len(file_list)):
+        if i % 100 == 0: print(i)
         file_path = os.path.join(data_dir, "False" if y_list[i] == 1 else "Positive", feature_type, file_list[i])
         x_batch = read_feature_file(file_path, feature_type, get_config("seq_len"))
         if compress:
@@ -130,13 +131,13 @@ def nn(model_name, model, X_train, X_test, y_train, y_test):
 
 if __name__ == "__main__":
 
-# "TextVector", "WordVector", "ParagraphVec",
-    for s in ["Combine"]:
+# "TextVector", "WordVector", "ParagraphVec", "Combine"
+    for s in ["TextVector", "WordVector", "ParagraphVec"]:
         print("#  " + s)
+        '''
         if s == "Combine":
             s = "ParagraphVec"
             file_train, file_test, y_train, y_test = data_split(sys.argv[1], s)
-        '''
             X_train, y_train = vector_combine(file_train, y_train, sys.argv[1], compress=True)
             X_test, y_test = vector_combine(file_test, y_test, sys.argv[1], compress=True)
         else:
@@ -147,10 +148,10 @@ if __name__ == "__main__":
         randomForest(X_train, X_test, y_train, y_test)
         gaussianNB(X_train, X_test, y_train, y_test)
         '''
-
+        file_train, file_test, y_train, y_test = data_split(sys.argv[1], s)
         X_train = vector_seq(file_train, y_train, sys.argv[1])
         X_test = vector_seq(file_test, y_test, sys.argv[1])
-        nn("cnn", cnn_model(16), X_train, X_test, y_train, y_test)
+        # nn("cnn", cnn_model(16), X_train, X_test, y_train, y_test)
         nn("lstm", lstm_model(16), X_train, X_test, y_train, y_test)
 
     # nn
