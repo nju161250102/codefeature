@@ -15,9 +15,9 @@ import pandas as pd
 import numpy as np
 
 
-def cnn_model(size):
+def cnn_model(shape_0=get_config("seq_len"), shape_1=16):
     model = Sequential()
-    model.add(Conv1D(32, kernel_size=3, activation='relu', input_shape=(get_config("seq_len"), size)))
+    model.add(Conv1D(32, kernel_size=3, activation='relu', input_shape=(shape_0, shape_1)))
     model.add(MaxPool1D(2))
     model.add(Conv1D(16, kernel_size=5, activation='relu'))
     model.add(GlobalAveragePooling1D())
@@ -30,9 +30,9 @@ def cnn_model(size):
     return model
 
 
-def lstm_model(size):
+def lstm_model(shape_0=get_config("seq_len"), shape_1=16):
     model = Sequential()
-    model.add(LSTM(size, input_shape=(get_config("seq_len"), size)))
+    model.add(LSTM(shape_1, input_shape=(shape_0, shape_1)))
     model.add(Dense(32, activation='relu'))
     model.add(Dense(16, activation='relu'))
     model.add(Dense(2, activation='softmax'))
@@ -95,80 +95,79 @@ class Metrics(History):
         logs['val_precision'] = _val_precision
 
 
-if __name__ == "__main__":
+def train_main(data_dir, model_path, model_name, epoch_num, feature_size, flag=True):
 
-    if len(sys.argv) < 2:
-        print(json.dumps({"modelNum": 4}))
+    vector_paths = get_feature_files(data_dir)
+    random.shuffle(vector_paths)
+
+    deepwalk_files = get_feature_files(data_dir, "DeepWalk")
+    random.shuffle(deepwalk_files)
+    paragraph_files = get_feature_files(data_dir, "ParagraphVec")
+    random.shuffle(paragraph_files)
+    # print(vector_size, len(deepwalk_files))
+
+    if len(sys.argv) > 5:
+        vector_paths_test = vector_paths[:int(len(vector_paths) * 0.2)]
+        vector_paths = vector_paths[int(len(vector_paths) * 0.2):]
+        deepwalk_files_test = deepwalk_files[:int(len(deepwalk_files) * 0.2)]
+        deepwalk_files = deepwalk_files[int(len(deepwalk_files) * 0.2):]
+        paragraph_files_test = paragraph_files[:int(len(paragraph_files) * 0.2)]
+        paragraph_files = paragraph_files[int(len(paragraph_files) * 0.2):]
     else:
-        vector_paths = get_feature_files(sys.argv[1])
-        random.shuffle(vector_paths)
+        vector_paths_test = vector_paths
+        deepwalk_files_test = deepwalk_files
+        paragraph_files_test = paragraph_files
 
-        deepwalk_files = get_feature_files(sys.argv[1], "DeepWalk")
-        random.shuffle(deepwalk_files)
-        paragraph_files = get_feature_files(sys.argv[1], "ParagraphVec")
-        random.shuffle(paragraph_files)
-        # print(vector_size, len(deepwalk_files))
+    model_list = [{
+        "name": "cnn",
+        "model": cnn_model(feature_size),
+        "generator": vector_generate(sys.argv[1], vector_paths, get_config("seq_len")),
+        "steps": int(len(vector_paths) / get_config("batch_size")),
+        "test_generator": vector_generate(sys.argv[1], vector_paths_test, get_config("seq_len")),
+        "test_steps": int(len(vector_paths_test) / get_config("batch_size")),
+    },{
+        "name": "lstm",
+        "model": lstm_model(feature_size),
+        "generator": vector_generate(sys.argv[1], vector_paths, get_config("seq_len")),
+        "steps": int(len(vector_paths) / get_config("batch_size")),
+        "test_generator": vector_generate(sys.argv[1], vector_paths_test, get_config("seq_len")),
+        "test_steps": int(len(vector_paths_test) / get_config("batch_size")),
+    },{
+        "name": "deepwalk",
+        "model": gcn_model(feature_size),
+        "generator": graph_generate(sys.argv[1], "DeepWalk", deepwalk_files, get_config("node_len")),
+        "steps": int(len(deepwalk_files) / get_config("batch_size")),
+        "test_generator": graph_generate(sys.argv[1], "DeepWalk", deepwalk_files_test, get_config("node_len")),
+        "test_steps": int(len(deepwalk_files_test) / get_config("batch_size")),
+    },{
+        "name": "para2vec",
+        "model": gcn_model(feature_size),
+        "generator": graph_generate(sys.argv[1], "ParagraphVec", paragraph_files, get_config("node_len")),
+        "steps": int(len(paragraph_files) / get_config("batch_size")),
+        "test_generator": graph_generate(sys.argv[1], "ParagraphVec", paragraph_files_test, get_config("node_len")),
+        "test_steps": int(len(paragraph_files_test) / get_config("batch_size")),
+    }]
 
-        model_path = sys.argv[2]
-        model_name = sys.argv[3]
-        epoch_num = int(sys.argv[4])
-        feature_size = int(sys.argv[5])
+    for item in model_list:
+        if model_name != item["name"]:
+            continue
+        model = item["model"]
 
-        if len(sys.argv) > 5:
-            vector_paths_test = vector_paths[:int(len(vector_paths) * 0.2)]
-            vector_paths = vector_paths[int(len(vector_paths) * 0.2):]
-            deepwalk_files_test = deepwalk_files[:int(len(deepwalk_files) * 0.2)]
-            deepwalk_files = deepwalk_files[int(len(deepwalk_files) * 0.2):]
-            paragraph_files_test = paragraph_files[:int(len(paragraph_files) * 0.2)]
-            paragraph_files = paragraph_files[int(len(paragraph_files) * 0.2):]
+        if flag:
+            g1, g2, g3 = itertools.tee(item["test_generator"], 3)
+            history = model.fit_generator(item["generator"], steps_per_epoch=item["steps"],
+                                          validation_data=g1, validation_steps=item["test_steps"],
+                                          epochs=epoch_num, verbose=0, workers=0, callbacks=[Metrics(g2, item["test_steps"])]).history
+            history["name"] = item["name"]
+            with open(os.path.join(model_path, "_".join([item["name"], str(feature_size), str(epoch_num)])), 'w') as f:
+                f.write(str(history).replace("'", "\""))
         else:
-            vector_paths_test = vector_paths
-            deepwalk_files_test = deepwalk_files
-            paragraph_files_test = paragraph_files
-
-        model_list = [{
-            "name": "cnn",
-            "model": cnn_model(feature_size),
-            "generator": vector_generate(sys.argv[1], vector_paths, get_config("seq_len")),
-            "steps": int(len(vector_paths) / get_config("batch_size")),
-            "test_generator": vector_generate(sys.argv[1], vector_paths_test, get_config("seq_len")),
-            "test_steps": int(len(vector_paths_test) / get_config("batch_size")),
-        },{
-            "name": "lstm",
-            "model": lstm_model(feature_size),
-            "generator": vector_generate(sys.argv[1], vector_paths, get_config("seq_len")),
-            "steps": int(len(vector_paths) / get_config("batch_size")),
-            "test_generator": vector_generate(sys.argv[1], vector_paths_test, get_config("seq_len")),
-            "test_steps": int(len(vector_paths_test) / get_config("batch_size")),
-        },{
-            "name": "deepwalk",
-            "model": gcn_model(feature_size),
-            "generator": graph_generate(sys.argv[1], "DeepWalk", deepwalk_files, get_config("node_len")),
-            "steps": int(len(deepwalk_files) / get_config("batch_size")),
-            "test_generator": graph_generate(sys.argv[1], "DeepWalk", deepwalk_files_test, get_config("node_len")),
-            "test_steps": int(len(deepwalk_files_test) / get_config("batch_size")),
-        },{
-            "name": "para2vec",
-            "model": gcn_model(feature_size),
-            "generator": graph_generate(sys.argv[1], "ParagraphVec", paragraph_files, get_config("node_len")),
-            "steps": int(len(paragraph_files) / get_config("batch_size")),
-            "test_generator": graph_generate(sys.argv[1], "ParagraphVec", paragraph_files_test, get_config("node_len")),
-            "test_steps": int(len(paragraph_files_test) / get_config("batch_size")),
-        }]
-
-        for item in model_list:
-            if model_name != item["name"]:
-                continue
-            model = item["model"]
-
-            model.fit_generator(item["generator"], steps_per_epoch=item["steps"], epochs=epoch_num, verbose=0, workers=0)
+            model.fit_generator(item["generator"], steps_per_epoch=item["steps"], epochs=epoch_num, verbose=(0 if flag else 1), workers=0)
+        model.save(os.path.join(model_path, "_".join([item["name"], str(feature_size), str(epoch_num)]) + ".h5"))
 
 
-            # g1, g2, g3 = itertools.tee(item["test_generator"], 3)
-            # history = model.fit_generator(item["generator"], steps_per_epoch=item["steps"],
-            #                               validation_data=g1, validation_steps=item["test_steps"],
-            #                               epochs=epoch_num, verbose=0, workers=0, callbacks=[Metrics(g2, item["test_steps"])]).history
-            # history["name"] = item["name"]
-            # model.save(os.path.join(model_path, "_".join([item["name"], str(feature_size), str(epoch_num)]) + ".h5"))
-            # with open(os.path.join(model_path, "_".join([item["name"], str(feature_size), str(epoch_num)])), 'w') as f:
-            #     f.write(str(history).replace("'", "\""))
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+            print(json.dumps({"modelNum": 4}))
+    else:
+        train_main(sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4]), int(sys.argv[5]))
