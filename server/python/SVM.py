@@ -30,7 +30,7 @@ def data_split(data_dir, feature_type="WordVector"):
         y_data.append(1 if label == "False" else 0)
 
     print(feature_type + ": " + str(len(file_data)))
-    return train_test_split(file_data, y_data, test_size=0.3)
+    return train_test_split(file_data, y_data, test_size=0.2)
 
 
 def vector_seq(file_list, y_list, data_dir, feature_type="WordVector", compress=False):
@@ -46,7 +46,7 @@ def vector_seq(file_list, y_list, data_dir, feature_type="WordVector", compress=
     if compress:
         return preprocessing.scale(np.array(x_data))
     else:
-        return [x_data]
+        return x_data
 
 
 def vector_combine(file_list, y_list, data_dir, compress=False):
@@ -59,7 +59,7 @@ def vector_combine(file_list, y_list, data_dir, compress=False):
             if not os.path.isfile(file_path) or os.path.getsize(file_path) == 0:
                 continue
             x_batch.extend(read_feature_file(file_path, s, get_config("node_len") if s == "ParagraphVec" else get_config("seq_len")))
-        if len(x_batch) < 544:
+        if len(x_batch) < get_config("seq_len")*2 + get_config("node_len"):
             continue
         if compress:
             x_data.append([sum(batch) / len(batch) for batch in x_batch])
@@ -69,7 +69,7 @@ def vector_combine(file_list, y_list, data_dir, compress=False):
     if compress:
         return preprocessing.scale(np.array(x_data)), y_data
     else:
-        return [x_data], y_data
+        return x_data, y_data
 
 
 def vector_graph(file_list, y_list, data_dir, feature_type):
@@ -124,52 +124,47 @@ def randomForest(X_train, X_test, y_train, y_test):
 
 
 def nn(model_name, model, X_train, X_test, y_train, y_test):
-    model.fit(X_train, [transform_y(y_train)], epochs=10, verbose=0)
+    model.fit(X_train, [transform_y(y_train)], epochs=10, verbose=1)
     evaluate(y_train, transform_predict_y(model.predict(X_train)), model_name + "的训练集")
     evaluate(y_test, transform_predict_y(model.predict(X_test)), model_name + "的测试集")
 
 
-if __name__ == "__main__":
-
-# "TextVector", "WordVector", "ParagraphVec", "Combine"
-    for s in ["TextVector", "WordVector", "ParagraphVec"]:
-        print("#  " + s)
-        '''
-        if s == "Combine":
-            s = "ParagraphVec"
-            file_train, file_test, y_train, y_test = data_split(sys.argv[1], s)
-            X_train, y_train = vector_combine(file_train, y_train, sys.argv[1], compress=True)
-            X_test, y_test = vector_combine(file_test, y_test, sys.argv[1], compress=True)
+def save_data(data_path, feature_type):
+    for flag in [True, False]:
+        if feature_type == "Combine":
+            file_train, file_test, y_train, y_test = data_split(data_path, "ParagraphVec")
+            X_train, y_train = vector_combine(file_train, y_train, data_path, compress=flag)
+            X_test, y_test = vector_combine(file_test, y_test, data_path, compress=flag)
         else:
             file_train, file_test, y_train, y_test = data_split(sys.argv[1], s)
-            X_train = vector_seq(file_train, y_train, sys.argv[1], compress=True)
-            X_test = vector_seq(file_test, y_test, sys.argv[1], compress=True)
-        svm(X_train, X_test, y_train, y_test)
-        randomForest(X_train, X_test, y_train, y_test)
-        gaussianNB(X_train, X_test, y_train, y_test)
-        '''
-        file_train, file_test, y_train, y_test = data_split(sys.argv[1], s)
-        X_train = vector_seq(file_train, y_train, sys.argv[1])
-        X_test = vector_seq(file_test, y_test, sys.argv[1])
-        # nn("cnn", cnn_model(16), X_train, X_test, y_train, y_test)
-        nn("lstm", lstm_model(16), X_train, X_test, y_train, y_test)
+            X_train = vector_seq(file_train, y_train, data_path, compress=flag)
+            X_test = vector_seq(file_test, y_test, data_path, compress=flag)
+        save_path = os.path.join(data_path, feature_type + "_" + str(int(flag)) + ".npz")
+        np.savez(save_path, X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test)
 
-    # nn
-    #file_train, file_test, y_train, y_test = data_split(sys.argv[1], "ParagraphVec")
-    #X_train = vector_seq(file_train, y_train, sys.argv[1])
-    #X_test = vector_seq(file_test, y_test, sys.argv[1])
-    #nn("cnn", cnn_model(16), X_train, X_test, y_train, y_test)
-    #
-    #nn("lstm", lstm_model(16), X_train, X_test, y_train, y_test)
-    #
-    #file_train, file_test, y_train, y_test = data_split(sys.argv[1], "DeepWalk")
-    #X_train, y_train = vector_graph(file_train, y_train, sys.argv[1], "DeepWalk")
-    #X_test, y_test = vector_graph(file_test, y_test, sys.argv[1], "DeepWalk")
-    #nn("deepwalk_gcn", gcn_model(16), X_train, X_test, y_train, y_test)
-    #
-    #file_train, file_test, y_train, y_test = data_split(sys.argv[1], "ParagraphVec")
-    #X_train, y_train = vector_graph(file_train, y_train, sys.argv[1], "ParagraphVec")
-    #X_test, y_test = vector_graph(file_test, y_test, sys.argv[1], "ParagraphVec")
-    #nn("para2vec_gcn", gcn_model(16), X_train, X_test, y_train, y_test)
+
+def train_data(data_path, feature_type):
+    save_path = os.path.join(data_path, feature_type + "_1.npz")
+    data = np.load(save_path)
+    svm(data["X_train"], data["X_test"], data["y_train"], data["y_test"])
+    randomForest(data["X_train"], data["X_test"], data["y_train"], data["y_test"])
+    gaussianNB(data["X_train"], data["X_test"], data["y_train"], data["y_test"])
+
+    save_path = os.path.join(data_path, feature_type + "_0.npz")
+    data = np.load(save_path)
+    if feature_type == "Combine":
+        shape_0 = get_config("seq_len")*2 + get_config("node_len")
+        nn("cnn", cnn_model(shape_0, 16), data["X_train"], data["X_test"], data["y_train"], data["y_test"])
+        nn("lstm", lstm_model(shape_0, 16), data["X_train"], data["X_test"], data["y_train"], data["y_test"])
+    else:
+        nn("cnn", cnn_model(), data["X_train"], data["X_test"], data["y_train"], data["y_test"])
+        nn("lstm", lstm_model(), data["X_train"], data["X_test"], data["y_train"], data["y_test"])
+
+
+if __name__ == "__main__":
+    for s in ["TextVector", "WordVector", "ParagraphVec", "Combine"]:
+        print("#  " + s)
+        save_data(sys.argv[1], s)
+        train_data(sys.argv[1], s)
 
 
